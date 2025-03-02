@@ -16,10 +16,10 @@ import { ThemedView } from '@/components/ThemedView';
 const isSimulator = () => {
   return (
     Platform.OS === 'ios' && 
-    Constants.executionEnvironment === 'simulator'
+    Constants.executionEnvironment === 'simulator' as any
   ) || (
     Platform.OS === 'android' && 
-    Constants.executionEnvironment === 'storeClient' &&
+    Constants.executionEnvironment === 'storeClient' as any &&
     !Constants.isDevice
   );
 };
@@ -29,7 +29,7 @@ export default function HomeScreen() {
   const screenHeight = Dimensions.get('window').height;
   
   // State for selected image and modal visibility
-  const [selectedImage, setSelectedImage] = useState(null);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
@@ -91,7 +91,7 @@ export default function HomeScreen() {
         setSelectedImage(result.assets[0].uri);
         setModalVisible(true);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Camera error:', error);
       setIsLoading(false);
       Alert.alert(

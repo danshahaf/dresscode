@@ -21,15 +21,15 @@ export default function ProgressScreen() {
 
   // Render each outfit ticket
   const renderOutfitTicket = ({ item }: { item: Outfit }) => (
-    <OutfitTicket item={item} onPress={handleOutfitPress} />
+    <OutfitTicket outfit={item} onPress={handleOutfitPress} />
   );
 
   return (
     <SafeAreaView style={progressStyles.container}>
-      <View style={progressStyles.header}>
+      {/* <View style={progressStyles.header}>
         <Text style={progressStyles.title}>Style Progress</Text>
         <Text style={progressStyles.subtitle}>Track your fashion journey</Text>
-      </View>
+      </View> */}
 
       {/* Progress Chart */}
       <ProgressChart dailyScores={mockDailyScores} />
@@ -39,7 +39,7 @@ export default function ProgressScreen() {
       <FlatList
         data={mockOutfits}
         renderItem={renderOutfitTicket}
-        keyExtractor={item => item.id}
+        keyExtractor={item => item.id.toString()}
         numColumns={3}
         contentContainerStyle={progressStyles.outfitsContainer}
         columnWrapperStyle={progressStyles.outfitGrid}

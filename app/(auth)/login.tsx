@@ -16,7 +16,9 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { useRouter } from 'expo-router';
+import { Link, useRouter } from 'expo-router';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
 
 const { width, height } = Dimensions.get('window');
 
@@ -24,7 +26,7 @@ export default function LoginScreen() {
   const router = useRouter();
   const [isLogin, setIsLogin] = useState(true);
   const [isLoading, setIsLoading] = useState(false);
-  const [socialLoading, setSocialLoading] = useState('');
+  const [socialLoading, setSocialLoading] = useState<string | null>(null);
   
   // Form state
   const [email, setEmail] = useState('');
@@ -70,7 +72,7 @@ export default function LoginScreen() {
   };
   
   // Handle social sign-in
-  const handleSocialSignIn = async (provider) => {
+  const handleSocialSignIn = async (provider: string) => {
     try {
       setSocialLoading(provider);
       
@@ -81,12 +83,11 @@ export default function LoginScreen() {
       router.replace('/(tabs)');
       
     } catch (error) {
+      setSocialLoading(null);
       Alert.alert(
         'Authentication Error',
-        `There was a problem signing in with ${provider}. Please try again.`
+        `Failed to sign in with ${provider}. Please try again.`
       );
-    } finally {
-      setSocialLoading('');
     }
   };
   
@@ -103,70 +104,56 @@ export default function LoginScreen() {
   };
   
   return (
-    <View style={styles.container}>
-      {/* Background Image */}
-      <Image 
-        source={require('@/assets/images/cover-dresscode.png')} 
-        style={styles.backgroundImage}
-        resizeMode="cover"
-      />
-      
-      {/* Blur Overlay */}
-      <BlurView 
-        intensity={10} 
-        style={StyleSheet.absoluteFill} 
-        tint="dark"
-      />
-      
-      {/* Gradient Overlay */}
-      <LinearGradient
-        colors={['rgba(0,0,0,0.3)', 'rgba(0,0,0,0.7)']}
-        style={StyleSheet.absoluteFill}
-      />
-      
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        style={styles.keyboardAvoidingView}
-      >
-        <ScrollView
-          contentContainerStyle={styles.scrollContent}
-          keyboardShouldPersistTaps="handled"
-        >
-          {/* Logo and App Name */}
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
+        {/* Background Image */}
+        <Image
+          source={{ uri: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070' }}
+          style={styles.backgroundImage}
+        />
+        
+        {/* Gradient Overlay */}
+        <LinearGradient
+          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
+          style={styles.gradient}
+        />
+        
+        {/* Content */}
+        <View style={styles.content}>
+          {/* Logo/App Name */}
           <View style={styles.logoContainer}>
-            <IconSymbol size={60} name="tshirt" color="#cca702" />
-            <Text style={styles.appName}>DressCode</Text>
-            <Text style={styles.tagline}>Your Personal Style Assistant</Text>
+            <Text style={styles.logoText}>STYLIST</Text>
+            <Text style={styles.tagline}>Your AI Fashion Assistant</Text>
           </View>
           
           {/* Auth Form */}
-          <View style={styles.formContainer}>
-            <Text style={styles.formTitle}>
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </Text>
+          <BlurView intensity={30} tint="dark" style={styles.formContainer}>
+            <Text style={styles.formTitle}>{isLogin ? 'Sign In' : 'Create Account'}</Text>
             
             {/* Name Input (Sign Up only) */}
             {!isLogin && (
-              <View style={styles.inputContainer}>
-                <IconSymbol size={20} name="person.fill" color="#999" style={styles.inputIcon} />
+              <View style={styles.inputWrapper}>
+                <IconSymbol name="person" size={20} color="#fff" style={styles.inputIcon} />
                 <TextInput
                   style={styles.input}
                   placeholder="Full Name"
-                  placeholderTextColor="#999"
+                  placeholderTextColor="rgba(255,255,255,0.7)"
                   value={name}
                   onChangeText={setName}
-                  autoCapitalize="words"
                 />
               </View>
             )}
             
             {/* Email Input */}
-            <View style={styles.inputContainer}>
-              <IconSymbol size={20} name="envelope.fill" color="#999" style={styles.inputIcon} />
+            <View style={styles.inputWrapper}>
+              <IconSymbol name="envelope" size={20} color="#fff" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
-                placeholder="Email Address"
-                placeholderTextColor="#999"
+                placeholder="Email"
+                placeholderTextColor="rgba(255,255,255,0.7)"
                 value={email}
                 onChangeText={setEmail}
                 keyboardType="email-address"
@@ -175,31 +162,31 @@ export default function LoginScreen() {
             </View>
             
             {/* Password Input */}
-            <View style={styles.inputContainer}>
-              <IconSymbol size={20} name="lock.fill" color="#999" style={styles.inputIcon} />
+            <View style={styles.inputWrapper}>
+              <IconSymbol name="lock" size={20} color="#fff" style={styles.inputIcon} />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
-                placeholderTextColor="#999"
+                placeholderTextColor="rgba(255,255,255,0.7)"
                 value={password}
                 onChangeText={setPassword}
                 secureTextEntry={!passwordVisible}
               />
               <TouchableOpacity 
-                style={styles.passwordToggle}
                 onPress={() => setPasswordVisible(!passwordVisible)}
+                style={styles.eyeIcon}
               >
                 <IconSymbol 
+                  name={passwordVisible ? "eye.slash" : "eye"} 
                   size={20} 
-                  name={passwordVisible ? "eye.slash.fill" : "eye.fill"} 
-                  color="#999" 
+                  color="#fff" 
                 />
               </TouchableOpacity>
             </View>
             
             {/* Forgot Password (Login only) */}
             {isLogin && (
-              <TouchableOpacity style={styles.forgotPasswordContainer}>
+              <TouchableOpacity style={styles.forgotPasswordButton}>
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             )}
@@ -208,10 +195,10 @@ export default function LoginScreen() {
             <TouchableOpacity 
               style={styles.submitButton}
               onPress={handleAuth}
-              disabled={isLoading || !!socialLoading}
+              disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" />
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
                 <Text style={styles.submitButtonText}>
                   {isLogin ? 'Sign In' : 'Create Account'}
@@ -219,47 +206,38 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
             
-            {/* Social Sign-In Divider */}
-            <View style={styles.dividerContainer}>
-              <View style={styles.divider} />
-              <Text style={styles.dividerText}>or continue with</Text>
-              <View style={styles.divider} />
-            </View>
-            
-            {/* Social Sign-In Buttons */}
-            <View style={styles.socialButtonsContainer}>
-              {/* Apple Sign-In */}
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialSignIn('Apple')}
-                disabled={isLoading || !!socialLoading}
-              >
-                {socialLoading === 'Apple' ? (
-                  <ActivityIndicator color="#000" size="small" />
-                ) : (
-                  <IconSymbol size={24} name="apple.logo" color="#000" />
-                )}
-              </TouchableOpacity>
+            {/* Social Login Options */}
+            <View style={styles.socialContainer}>
+              <Text style={styles.socialText}>Or continue with</Text>
               
-              {/* Google Sign-In */}
-              <TouchableOpacity 
-                style={styles.socialButton}
-                onPress={() => handleSocialSignIn('Google')}
-                disabled={isLoading || !!socialLoading}
-              >
-                {socialLoading === 'Google' ? (
-                  <ActivityIndicator color="#4285F4" size="small" />
-                ) : (
-                  <Image 
-                    source={require('@/assets/images/google-logo.png')} 
-                    style={styles.googleLogo}
-                    resizeMode="contain"
-                  />
-                )}
-              </TouchableOpacity>
+              <View style={styles.socialButtons}>
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialSignIn('google')}
+                  disabled={socialLoading !== null}
+                >
+                  {socialLoading === 'google' ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <Ionicons name="logo-google" size={24} color="#fff" />
+                  )}
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={styles.socialButton}
+                  onPress={() => handleSocialSignIn('apple')}
+                  disabled={socialLoading !== null}
+                >
+                  {socialLoading === 'apple' ? (
+                    <ActivityIndicator color="#fff" size="small" />
+                  ) : (
+                    <IconSymbol name="apple.logo" size={24} color="#fff" />
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
             
-            {/* Toggle Auth Mode */}
+            {/* Toggle Login/Signup */}
             <View style={styles.toggleContainer}>
               <Text style={styles.toggleText}>
                 {isLogin ? "Don't have an account?" : "Already have an account?"}
@@ -270,35 +248,38 @@ export default function LoginScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
-            
-            {/* Skip Button (for demo) */}
-            <TouchableOpacity 
-              style={styles.skipButton}
-              onPress={handleSkip}
-            >
-              <Text style={styles.skipButtonText}>Skip for now</Text>
-            </TouchableOpacity>
-          </View>
-        </ScrollView>
-      </KeyboardAvoidingView>
-    </View>
+          </BlurView>
+          
+          {/* Skip Button (for demo) */}
+          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
+            <Text style={styles.skipButtonText}>Skip for now</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#000',
   },
   backgroundImage: {
     position: 'absolute',
-    width: '100%',
-    height: '100%',
+    width: width,
+    height: height,
+    resizeMode: 'cover',
   },
-  keyboardAvoidingView: {
+  gradient: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    height: height,
+  },
+  content: {
     flex: 1,
-  },
-  scrollContent: {
-    flexGrow: 1,
     justifyContent: 'center',
     padding: 20,
   },
@@ -306,55 +287,50 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 40,
   },
-  appName: {
+  logoText: {
     fontSize: 36,
     fontWeight: 'bold',
     color: '#fff',
-    marginTop: 10,
+    letterSpacing: 2,
   },
   tagline: {
     fontSize: 16,
-    color: '#cca702',
+    color: 'rgba(255,255,255,0.8)',
     marginTop: 5,
   },
   formContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
     borderRadius: 20,
-    padding: 25,
-    width: '100%',
-    maxWidth: 400,
-    alignSelf: 'center',
+    padding: 20,
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.3)',
   },
   formTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: '#333',
+    color: '#fff',
     marginBottom: 20,
     textAlign: 'center',
   },
-  inputContainer: {
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    borderRadius: 12,
-    marginBottom: 15,
-    paddingHorizontal: 15,
-    backgroundColor: '#f8f8f8',
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.3)',
+    marginBottom: 20,
+    paddingBottom: 10,
   },
   inputIcon: {
     marginRight: 10,
   },
   input: {
     flex: 1,
-    paddingVertical: 15,
+    color: '#fff',
     fontSize: 16,
-    color: '#333',
   },
-  passwordToggle: {
-    padding: 10,
+  eyeIcon: {
+    padding: 5,
   },
-  forgotPasswordContainer: {
+  forgotPasswordButton: {
     alignSelf: 'flex-end',
     marginBottom: 20,
   },
@@ -364,69 +340,49 @@ const styles = StyleSheet.create({
   },
   submitButton: {
     backgroundColor: '#cca702',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: 30,
+    height: 50,
+    justifyContent: 'center',
     alignItems: 'center',
-    marginTop: 10,
+    marginBottom: 20,
   },
   submitButtonText: {
     color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
-  dividerContainer: {
-    flexDirection: 'row',
+  socialContainer: {
     alignItems: 'center',
     marginVertical: 20,
   },
-  divider: {
-    flex: 1,
-    height: 1,
-    backgroundColor: '#ddd',
+  socialText: {
+    color: 'rgba(255,255,255,0.7)',
+    marginBottom: 15,
   },
-  dividerText: {
-    color: '#999',
-    paddingHorizontal: 10,
-    fontSize: 14,
-  },
-  socialButtonsContainer: {
+  socialButtons: {
     flexDirection: 'row',
     justifyContent: 'center',
-    gap: 20,
-    marginBottom: 10,
   },
   socialButton: {
     width: 50,
     height: 50,
     borderRadius: 25,
-    backgroundColor: '#fff',
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#ddd',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  googleLogo: {
-    width: 24,
-    height: 24,
+    marginHorizontal: 10,
   },
   toggleContainer: {
     flexDirection: 'row',
     justifyContent: 'center',
-    marginTop: 20,
+    marginTop: 10,
   },
   toggleText: {
-    color: '#666',
-    fontSize: 14,
+    color: 'rgba(255,255,255,0.7)',
   },
   toggleButton: {
     color: '#cca702',
-    fontSize: 14,
-    fontWeight: '600',
+    fontWeight: 'bold',
     marginLeft: 5,
   },
   skipButton: {
@@ -435,7 +391,7 @@ const styles = StyleSheet.create({
     padding: 10,
   },
   skipButtonText: {
-    color: '#999',
+    color: 'rgba(255,255,255,0.6)',
     fontSize: 14,
   },
 }); 

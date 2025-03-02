@@ -15,32 +15,35 @@ export const calculateOverallScore = (analysis: StyleAnalysis): string => {
 
 // Get color based on score
 export const getScoreColor = (value: number): string => {
-  if (value >= 8.5) return '#4CAF50'; // Green for high scores
-  if (value >= 7) return '#FFC107';   // Amber for medium scores
-  return '#F44336';                   // Red for low scores
+  if (value >= 8.5) return '#4CAF50'; // Green for high scores - update this color
+  if (value >= 7) return '#CCA702';   // Gold for medium scores - matches app theme
+  return '#E53935';                   // Red for low scores - update this color
 };
 
 // Calculate chart points and path
 export const calculateChartPath = (
-  scores: { date: string; score: number }[],
-  chartWidth: number,
-  chartHeight: number
-): { pathD: string; points: { x: number; y: number }[] } => {
-  const pointSpacing = chartWidth / (scores.length - 1);
-  let pathD = '';
-  
-  const points = scores.map((item, index) => {
-    const x = index * pointSpacing;
-    const y = chartHeight - (item.score / 100 * chartHeight);
-    
-    if (index === 0) {
-      pathD += `M ${x} ${y}`;
-    } else {
-      pathD += ` L ${x} ${y}`;
-    }
-    
+  dailyScores: DailyScore[],
+  width: number,
+  height: number,
+  leftPadding: number = 0
+) => {
+  if (!dailyScores || dailyScores.length === 0) {
+    return { pathD: '', points: [] };
+  }
+
+  const points = dailyScores.map((score, index) => {
+    // Calculate x position with proper padding
+    const x = leftPadding + (index * ((width - leftPadding) / (dailyScores.length - 1)));
+    // Calculate y position (invert the y-axis since SVG 0,0 is top-left)
+    const y = height - (score.score / 100 * height);
     return { x, y };
   });
-  
+
+  // Create the path data
+  let pathD = `M ${points[0].x} ${points[0].y}`;
+  for (let i = 1; i < points.length; i++) {
+    pathD += ` L ${points[i].x} ${points[i].y}`;
+  }
+
   return { pathD, points };
 }; 
