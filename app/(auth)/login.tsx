@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -19,6 +19,7 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { supabase, signIn, signUp, signInWithGoogle, signInWithApple } from '@/lib/supabase';
 
 const { width, height } = Dimensions.get('window');
 
@@ -33,6 +34,19 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
   const [passwordVisible, setPasswordVisible] = useState(false);
+  
+  // Check for existing session on load
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (data.session) {
+        // User is already logged in, redirect to main app
+        router.replace('/(tabs)');
+      }
+    };
+    
+    checkSession();
+  }, []);
   
   // Handle authentication
   const handleAuth = async () => {
@@ -55,16 +69,36 @@ export default function LoginScreen() {
     try {
       setIsLoading(true);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      if (isLogin) {
+        // Sign in
+        const { data, error } = await signIn(email, password);
+        
+        if (error) throw error;
+      } else {
+        // Sign up
+        const { data, error } = await signUp(email, password, { full_name: name });
+        
+        if (error) throw error;
+        
+        // If sign up successful but needs email confirmation
+        if (data.user && data.session === null) {
+          Alert.alert(
+            'Verification Email Sent',
+            'Please check your email to verify your account before logging in.'
+          );
+          setIsLogin(true); // Switch to login view
+          setPassword('');
+          return;
+        }
+      }
       
-      // For demo purposes, just navigate to the main app
+      // If we get here, authentication was successful
       router.replace('/(tabs)');
       
-    } catch (error) {
+    } catch (error: any) {
       Alert.alert(
         'Authentication Error',
-        'There was a problem authenticating. Please try again.'
+        error.message || 'There was a problem authenticating. Please try again.'
       );
     } finally {
       setIsLoading(false);
@@ -72,21 +106,25 @@ export default function LoginScreen() {
   };
   
   // Handle social sign-in
-  const handleSocialSignIn = async (provider: string) => {
+  const handleSocialSignIn = async (provider: 'google' | 'apple') => {
     try {
       setSocialLoading(provider);
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      let { data, error } = provider === 'google' 
+        ? await signInWithGoogle()
+        : await signInWithApple();
       
-      // For demo purposes, just navigate to the main app
-      router.replace('/(tabs)');
+      if (error) throw error;
       
-    } catch (error) {
+      // Note: For OAuth with mobile apps, the user will be redirected to a web browser
+      // and then back to the app via deep linking. The actual navigation to the main app
+      // will happen when the deep link is processed.
+      
+    } catch (error: any) {
       setSocialLoading(null);
       Alert.alert(
         'Authentication Error',
-        `Failed to sign in with ${provider}. Please try again.`
+        `Failed to sign in with ${provider}. ${error.message || 'Please try again.'}`
       );
     }
   };
@@ -186,7 +224,29 @@ export default function LoginScreen() {
             
             {/* Forgot Password (Login only) */}
             {isLogin && (
-              <TouchableOpacity style={styles.forgotPasswordButton}>
+              <TouchableOpacity 
+                style={styles.forgotPasswordButton}
+                onPress={() => Alert.alert(
+                  'Reset Password',
+                  'Enter your email to receive a password reset link',
+                  [
+                    { text: 'Cancel', style: 'cancel' },
+                    { 
+                      text: 'Send Link', 
+                      onPress: () => {
+                        if (email) {
+                          supabase.auth.resetPasswordForEmail(email, {
+                            redirectTo: 'dresscode://reset-password',
+                          });
+                          Alert.alert('Password Reset', 'Check your email for a password reset link');
+                        } else {
+                          Alert.alert('Error', 'Please enter your email first');
+                        }
+                      } 
+                    },
+                  ]
+                )}
+              >
                 <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
               </TouchableOpacity>
             )}
@@ -198,7 +258,7 @@ export default function LoginScreen() {
               disabled={isLoading}
             >
               {isLoading ? (
-                <ActivityIndicator color="#fff" size="small" />
+                <ActivityIndicator color="#fff" />
               ) : (
                 <Text style={styles.submitButtonText}>
                   {isLogin ? 'Sign In' : 'Create Account'}
@@ -206,10 +266,9 @@ export default function LoginScreen() {
               )}
             </TouchableOpacity>
             
-            {/* Social Login Options */}
+            {/* Social Login */}
             <View style={styles.socialContainer}>
               <Text style={styles.socialText}>Or continue with</Text>
-              
               <View style={styles.socialButtons}>
                 <TouchableOpacity 
                   style={styles.socialButton}
