@@ -20,8 +20,15 @@ import { Link, useRouter } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { supabase, signIn, signUp, signInWithGoogle, signInWithApple } from '@/lib/supabase';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+import * as Linking from 'expo-linking';
 
 const { width, height } = Dimensions.get('window');
+const appleRedirectUrl = 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback';
+
+// Enable WebBrowser redirect handling
+WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -47,6 +54,55 @@ export default function LoginScreen() {
     
     checkSession();
   }, []);
+
+  // Set up deep link handling for OAuth
+  useEffect(() => {
+    const handleDeepLink = (event: { url: string }) => {
+      // Handle the deep link
+      if (event.url.includes('auth/callback')) {
+        // The URL contains our auth callback
+        // Supabase Auth will automatically handle the token exchange
+        checkUserProfile();
+      }
+    };
+
+    // Add event listener for deep links
+    const subscription = Linking.addEventListener('url', handleDeepLink);
+
+    return () => {
+      subscription.remove();
+    };
+  }, []);
+  
+  // Check if user has a profile and redirect accordingly
+  const checkUserProfile = async () => {
+    try {
+      const { data: userData } = await supabase.auth.getUser();
+      
+      if (userData.user) {
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', userData.user.id)
+          .single();
+          
+        if (profileError && profileError.code !== 'PGRST116') {
+          throw profileError;
+        }
+        
+        // If no profile exists, redirect to profile setup
+        if (!profileData) {
+          router.replace('/(auth)/profile-setup');
+          return;
+        }
+        
+        // If profile exists, go to main app
+        router.replace('/(tabs)');
+      }
+    } catch (error) {
+      console.error('Error checking user profile:', error);
+    }
+  };
   
   // Handle authentication
   const handleAuth = async () => {
@@ -74,6 +130,27 @@ export default function LoginScreen() {
         const { data, error } = await signIn(email, password);
         
         if (error) throw error;
+        
+        // Check if user has a profile
+        const { data: profileData, error: profileError } = await supabase
+          .from('user_profiles')
+          .select('*')
+          .eq('user_id', data.user?.id)
+          .single();
+          
+        if (profileError && profileError.code !== 'PGRST116') {
+          // PGRST116 is "no rows returned" error, which is expected if no profile exists
+          throw profileError;
+        }
+        
+        // If no profile exists, redirect to profile setup
+        if (!profileData) {
+          router.replace('/(auth)/profile-setup');
+          return;
+        }
+        
+        // If profile exists, go to main app
+        router.replace('/(tabs)');
       } else {
         // Sign up
         const { data, error } = await signUp(email, password, { full_name: name });
@@ -90,10 +167,13 @@ export default function LoginScreen() {
           setPassword('');
           return;
         }
+        
+        // If sign up successful and session created, go to profile setup
+        if (data.user && data.session) {
+          router.replace('/(auth)/profile-setup');
+          return;
+        }
       }
-      
-      // If we get here, authentication was successful
-      router.replace('/(tabs)');
       
     } catch (error: any) {
       Alert.alert(
@@ -110,22 +190,92 @@ export default function LoginScreen() {
     try {
       setSocialLoading(provider);
       
-      let { data, error } = provider === 'google' 
-        ? await signInWithGoogle()
-        : await signInWithApple();
+      // Get the redirect URL for deep linking
+      const redirectUrl = makeRedirectUri({
+        scheme: 'dresscode',
+        path: 'auth/callback',
+      });
       
-      if (error) throw error;
+      console.log('Redirect URL:', redirectUrl);
       
-      // Note: For OAuth with mobile apps, the user will be redirected to a web browser
-      // and then back to the app via deep linking. The actual navigation to the main app
-      // will happen when the deep link is processed.
+      // Start the OAuth flow
+      if (provider === 'google') {
+        const { data, error } = await signInWithGoogle();
+        
+        if (error) {
+          console.error('Google sign-in error:', error);
+          throw error;
+        }
+        
+        // Open the browser for authentication
+        if (data?.url) {
+          console.log('Opening browser with URL:', data.url);
+          const result = await WebBrowser.openAuthSessionAsync(
+            data.url,
+            redirectUrl
+          );
+          
+          console.log('Browser result:', result);
+          
+          if (result.type === 'success') {
+            // The user was redirected back to our app
+            // Supabase Auth will automatically handle the token exchange
+            await checkUserProfile();
+          }
+        }
+      } else if (provider === 'apple') {
+        const { data, error } = await signInWithApple();
+        
+        if (error) {
+          console.error('Apple sign-in error:', error);
+          throw error;
+        }
+        
+        // Open the browser for authentication
+        if (data?.url) {
+          console.log('Opening browser with URL:', data.url);
+          const result = await WebBrowser.openAuthSessionAsync(data.url, appleRedirectUrl);
+          
+          console.log('Browser result:', result);
+          
+          if (result.type === 'success') {
+            // The user was redirected back to our app
+            // Supabase Auth will automatically handle the token exchange
+            await checkUserProfile();
+          }
+        }
+      }
       
     } catch (error: any) {
+      console.error(`Error signing in with ${provider}:`, error);
+      
+      // If provider is not enabled, offer demo mode
+      if (error.message && error.message.includes('provider is not enabled')) {
+        Alert.alert(
+          "OAuth Configuration Issue",
+          `There's still an issue with the ${provider} configuration. Would you like to use demo mode instead?`,
+          [
+            {
+              text: "Use Demo Mode",
+              onPress: () => {
+                global.demoMode = true;
+                router.replace('/(tabs)');
+              }
+            },
+            {
+              text: "Cancel",
+              style: "cancel"
+            }
+          ]
+        );
+      } else {
+        Alert.alert(
+          'Authentication Error',
+          `Failed to sign in with ${provider}. ${error.message || 'Please try again.'}`
+        );
+      }
+    } finally {
       setSocialLoading(null);
-      Alert.alert(
-        'Authentication Error',
-        `Failed to sign in with ${provider}. ${error.message || 'Please try again.'}`
-      );
     }
   };
   
@@ -138,6 +288,8 @@ export default function LoginScreen() {
   
   // Skip login for demo purposes
   const handleSkip = () => {
+    // Bypass authentication and go directly to main app
+    global.demoMode = true;
     router.replace('/(tabs)');
   };
   

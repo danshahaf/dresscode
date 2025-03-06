@@ -16,6 +16,8 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
+const appleRedirectUrl = 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback';
+
 // Get environment variables with fallbacks
 const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || 
   process.env.EXPO_PUBLIC_SUPABASE_URL || 
@@ -73,19 +75,25 @@ export const getSession = async () => {
 
 // Social auth helpers
 export const signInWithGoogle = async () => {
+  console.log('Starting Google sign-in flow');
   return supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
       redirectTo: 'dresscode://auth/callback',
+      queryParams: {
+        access_type: 'offline',
+        prompt: 'consent',
+      },
     },
   });
 };
 
 export const signInWithApple = async () => {
+  console.log('Starting Apple sign-in flow');
   return supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: 'dresscode://auth/callback',
+      redirectTo: 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback',
     },
   });
-}; 
+};

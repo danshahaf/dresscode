@@ -24,6 +24,11 @@ interface AuthProviderProps {
   children: ReactNode;
 }
 
+// Add this at the top level, outside the component
+declare global {
+  var demoMode: boolean;
+}
+
 // Create the auth provider component
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null);
@@ -36,8 +41,13 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (loading) return;
 
+    // Check for demo mode using global variable
+    if (global.demoMode) {
+      return;
+    }
+    
     const inAuthGroup = segments[0] === '(auth)';
-
+    
     if (!session && !inAuthGroup) {
       // If not logged in and not in auth group, redirect to login
       router.replace('/(auth)/login');

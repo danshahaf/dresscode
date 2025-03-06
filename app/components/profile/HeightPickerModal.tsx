@@ -2,12 +2,13 @@ import React from 'react';
 import { 
   View, 
   Text, 
-  TouchableOpacity, 
   Modal, 
-  Platform 
+  TouchableOpacity, 
+  StyleSheet,
+  ScrollView,
+  Dimensions
 } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { heightPickerStyles } from '@/app/styles/profile.styles';
+import { IconSymbol } from '@/components/ui/IconSymbol';
 
 interface HeightPickerModalProps {
   visible: boolean;
@@ -22,23 +23,21 @@ interface HeightPickerModalProps {
 export const HeightPickerModal = ({ 
   visible, 
   onClose, 
-  feet, 
-  inches, 
-  onFeetChange, 
-  onInchesChange, 
-  onSave 
+  feet,
+  inches,
+  onFeetChange,
+  onInchesChange,
+  onSave
 }: HeightPickerModalProps) => {
-  // Generate feet options (4-7 feet)
-  const feetOptions = [];
-  for (let i = 4; i <= 7; i++) {
-    feetOptions.push(i.toString());
-  }
-
+  // Generate feet options (3-8 feet)
+  const feetOptions = Array.from({ length: 6 }, (_, i) => (i + 3).toString());
+  
   // Generate inches options (0-11 inches)
-  const inchesOptions = [];
-  for (let i = 0; i <= 11; i++) {
-    inchesOptions.push(i.toString());
-  }
+  const inchesOptions = Array.from({ length: 12 }, (_, i) => i.toString());
+  
+  const handleSave = () => {
+    onSave();
+  };
   
   return (
     <Modal
@@ -47,51 +46,155 @@ export const HeightPickerModal = ({
       visible={visible}
       onRequestClose={onClose}
     >
-      <View style={heightPickerStyles.pickerModalOverlay}>
-        <View style={heightPickerStyles.pickerContainer}>
-          <View style={heightPickerStyles.pickerHeader}>
-            <TouchableOpacity onPress={onClose} style={heightPickerStyles.pickerCancelButton}>
-              <Text style={heightPickerStyles.pickerCancelText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <Text style={heightPickerStyles.pickerTitle}>Select Height</Text>
-            
-            <TouchableOpacity onPress={onSave} style={heightPickerStyles.pickerDoneButton}>
-              <Text style={heightPickerStyles.pickerDoneText}>Done</Text>
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.header}>
+            <Text style={styles.headerTitle}>Select Height</Text>
+            <TouchableOpacity style={styles.closeButton} onPress={onClose}>
+              <IconSymbol name="xmark" size={20} color="#333" />
             </TouchableOpacity>
           </View>
           
-          <View style={heightPickerStyles.pickerContent}>
-            <View style={heightPickerStyles.pickerColumn}>
-              <Text>Feet</Text>
-              <Picker
-                selectedValue={feet}
-                onValueChange={onFeetChange}
-                style={heightPickerStyles.picker}
-                itemStyle={heightPickerStyles.pickerItem}
-              >
+          <View style={styles.pickerContainer}>
+            <View style={styles.pickerColumn}>
+              <Text style={styles.pickerLabel}>Feet</Text>
+              <ScrollView style={styles.picker} showsVerticalScrollIndicator={false}>
                 {feetOptions.map((value) => (
-                  <Picker.Item key={`feet-${value}`} label={`${value} ft`} value={value} />
+                  <TouchableOpacity
+                    key={`feet-${value}`}
+                    style={[
+                      styles.pickerItem,
+                      feet === value && styles.selectedPickerItem
+                    ]}
+                    onPress={() => onFeetChange(value)}
+                  >
+                    <Text 
+                      style={[
+                        styles.pickerItemText,
+                        feet === value && styles.selectedPickerItemText
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
                 ))}
-              </Picker>
+              </ScrollView>
             </View>
             
-            <View style={heightPickerStyles.pickerColumn}>
-              <Text>Inches</Text>
-              <Picker
-                selectedValue={inches}
-                onValueChange={onInchesChange}
-                style={heightPickerStyles.picker}
-                itemStyle={heightPickerStyles.pickerItem}
-              >
+            <View style={styles.pickerColumn}>
+              <Text style={styles.pickerLabel}>Inches</Text>
+              <ScrollView style={styles.picker} showsVerticalScrollIndicator={false}>
                 {inchesOptions.map((value) => (
-                  <Picker.Item key={`inches-${value}`} label={`${value} in`} value={value} />
+                  <TouchableOpacity
+                    key={`inches-${value}`}
+                    style={[
+                      styles.pickerItem,
+                      inches === value && styles.selectedPickerItem
+                    ]}
+                    onPress={() => onInchesChange(value)}
+                  >
+                    <Text 
+                      style={[
+                        styles.pickerItemText,
+                        inches === value && styles.selectedPickerItemText
+                      ]}
+                    >
+                      {value}
+                    </Text>
+                  </TouchableOpacity>
                 ))}
-              </Picker>
+              </ScrollView>
             </View>
           </View>
+          
+          <TouchableOpacity 
+            style={styles.saveButton}
+            onPress={handleSave}
+          >
+            <Text style={styles.saveButtonText}>Save</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </Modal>
   );
-}; 
+};
+
+const { width, height } = Dimensions.get('window');
+
+const styles = StyleSheet.create({
+  modalOverlay: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0,0,0,0.5)',
+  },
+  modalContent: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
+    paddingBottom: 30,
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 20,
+    position: 'relative',
+  },
+  headerTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  closeButton: {
+    position: 'absolute',
+    right: 0,
+    padding: 5,
+  },
+  pickerContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 20,
+  },
+  pickerColumn: {
+    alignItems: 'center',
+    width: width * 0.3,
+  },
+  pickerLabel: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 10,
+  },
+  picker: {
+    height: 200,
+  },
+  pickerItem: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: width * 0.3,
+  },
+  selectedPickerItem: {
+    backgroundColor: '#f0f0f0',
+    borderRadius: 8,
+  },
+  pickerItemText: {
+    fontSize: 18,
+    color: '#333',
+  },
+  selectedPickerItemText: {
+    fontWeight: 'bold',
+    color: '#cca702',
+  },
+  saveButton: {
+    backgroundColor: '#cca702',
+    borderRadius: 8,
+    padding: 15,
+    alignItems: 'center',
+  },
+  saveButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+}); 
