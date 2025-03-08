@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "dresscode",
+    "name": "Dresscode AI",
     "slug": "dresscode",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -10,9 +10,10 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.example.dresscodeapp"
+      "bundleIdentifier": "com.seagulltechnologies.dresscodeapp"
     },
     "android": {
+      "package": "com.seagulltechnologies.dresscodeapp",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

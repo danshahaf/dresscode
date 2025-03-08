@@ -1,25 +1,32 @@
-const fs = require('fs');
+
+
+// Run: npm install jsonwebtoken
 const jwt = require('jsonwebtoken');
-const path = require('path');
+const fs = require('fs');
 
-// Your Apple Developer information
-const teamId = 'ZHCSTGTA8K';  // Your Team ID
-const clientId = 'com.example.dresscodeapp';  // Your Service ID
-const keyId = 'VJL8USU499';  // Your Key ID
-const privateKeyPath = path.join(__dirname, 'AuthKey_VJL8USU499.p8');  // Path to your private key file
+// Replace these values with your own details
+const TEAM_ID = 'ZHCSTGTA8K';           // e.g., 1ABCD234E5
+const KEY_ID = 'VJL8USU499';             // e.g., V8LABS49U9
+const SERVICE_ID = 'com.seagulltechnologies.dresscodeapp'; // Your Services ID
+const PRIVATE_KEY_PATH = './AuthKey_VJL8USU499.p8';        // Path to your downloaded .p8 file
 
-// Read private key
-const privateKey = fs.readFileSync(privateKeyPath);
+const privateKey = fs.readFileSync(PRIVATE_KEY_PATH);
 
-// Create JWT
-const token = jwt.sign({}, privateKey, {
-  algorithm: 'ES256',
-  expiresIn: '180d',  // Apple allows up to 6 months
-  audience: 'https://appleid.apple.com',
-  issuer: teamId,
-  subject: clientId,
-  keyid: keyId
-});
+const token = jwt.sign(
+  {
+    iss: TEAM_ID,
+    iat: Math.floor(Date.now() / 1000),
+    exp: Math.floor(Date.now() / 1000) + 15777000, // Approximately 6 months
+    aud: 'https://appleid.apple.com',
+    sub: SERVICE_ID,
+  },
+  privateKey,
+  {
+    algorithm: 'ES256',
+    header: {
+      kid: KEY_ID,
+    },
+  }
+);
 
-console.log('Your Apple Client Secret (valid for 180 days):');
-console.log(token);
+console.log('Your new Apple JWT:', token);

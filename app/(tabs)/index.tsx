@@ -7,10 +7,17 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import Constants from 'expo-constants';
 
+import { styles  } from '@/app/styles/scan';
+
+
 import { HelloWave } from '@/components/HelloWave';
 import ParallaxScrollView from '@/components/ParallaxScrollView';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
+
+// Import the upload function
+import { uploadOutfitImage } from '@/lib/storage';
+import { useAuth } from '@/lib/auth';
 
 // Helper function to detect if running on a simulator
 const isSimulator = () => {
@@ -37,6 +44,12 @@ export default function HomeScreen() {
   const [cameraVisible, setCameraVisible] = useState(false);
   const [hasCameraPermission, setHasCameraPermission] = useState(null);
   const cameraRef = useRef(null);
+  
+  // Add these state variables
+  const { user } = useAuth();
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [analysisResult, setAnalysisResult] = useState(null);
   
   // Handle scan outfit button press
   const handleScanOutfit = async () => {
@@ -151,16 +164,64 @@ export default function HomeScreen() {
   };
   
   // Analyze the selected outfit
-  const handleAnalyzeOutfit = () => {
-    // In a real app, you would send the image to your backend for analysis
-    setModalVisible(false);
+  const handleAnalyzeOutfit = async () => {
+    if (!selectedImage) {
+      Alert.alert('No Image', 'Please select an image first');
+      return;
+    }
     
-    // Show a loading indicator or navigate to a results page
-    Alert.alert(
-      "Analyzing Outfit",
-      "Your outfit is being analyzed. Results will be available soon.",
-      [{ text: "OK" }]
-    );
+    if (!user) {
+      Alert.alert('Not Logged In', 'Please log in to analyze outfits');
+      return;
+    }
+    
+    try {
+      setIsAnalyzing(true);
+      
+      // Upload the image to Supabase
+      const result = await uploadOutfitImage(
+        selectedImage,
+        user.id,
+        'Uploaded via app'
+      );
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to upload image');
+      }
+      
+      // Set the analysis result
+      setAnalysisResult(result.data);
+      
+      // Show success message
+      Alert.alert(
+        'Analysis Complete',
+        `Your outfit scored ${result.data.score} out of 100!`,
+        [
+          {
+            text: 'View Details',
+            onPress: () => {
+              // Navigate to the progress tab to see the outfit
+              router.push('/(tabs)/progress');
+            }
+          },
+          {
+            text: 'OK',
+            onPress: () => {
+              // Close the modal and reset
+              handleCloseModal();
+              setSelectedImage(null);
+              setAnalysisResult(null);
+            }
+          }
+        ]
+      );
+      
+    } catch (error) {
+      console.error('Error analyzing outfit:', error);
+      Alert.alert('Error', 'Failed to analyze outfit. Please try again.');
+    } finally {
+      setIsAnalyzing(false);
+    }
   };
   
   return (
@@ -233,6 +294,7 @@ export default function HomeScreen() {
               <TouchableOpacity 
                 style={styles.closeButton}
                 onPress={handleCloseModal}
+                disabled={isAnalyzing}
               >
                 <IconSymbol size={20} name="xmark" color="#333" />
               </TouchableOpacity>
@@ -245,15 +307,32 @@ export default function HomeScreen() {
                   style={styles.imagePreview} 
                   resizeMode="contain"
                 />
+                
+                {isAnalyzing && (
+                  <View style={styles.loadingOverlay}>
+                    <ActivityIndicator size="large" color="#cca702" />
+                    <Text style={styles.loadingText}>Analyzing your outfit...</Text>
+                  </View>
+                )}
               </View>
             )}
             
             <TouchableOpacity 
-              style={styles.analyzeButton}
+              style={[
+                styles.analyzeButton,
+                isAnalyzing && styles.disabledButton
+              ]}
               onPress={handleAnalyzeOutfit}
+              disabled={isAnalyzing || !selectedImage}
             >
-              <IconSymbol size={20} name="sparkles" color="#fff" style={styles.buttonIcon} />
-              <Text style={styles.analyzeButtonText}>Analyze Outfit</Text>
+              {isAnalyzing ? (
+                <Text style={styles.analyzeButtonText}>Analyzing...</Text>
+              ) : (
+                <>
+                  <IconSymbol size={20} name="sparkles" color="#fff" style={styles.buttonIcon} />
+                  <Text style={styles.analyzeButtonText}>Analyze Outfit</Text>
+                </>
+              )}
             </TouchableOpacity>
           </View>
         </View>
@@ -262,143 +341,3 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: '100%',
-    height: '100%',
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    bottom: 0,
-    height: '50%',
-  },
-  contentContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingBottom: 0,
-  },
-  buttonContainer: {
-    width: '100%',
-    paddingHorizontal: 30,
-    gap: 15,
-  },
-  primaryButton: {
-    backgroundColor: '#cca702',
-    borderColor: '#cca702',
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  primaryButtonText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  secondaryButton: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: '#fff',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  secondaryButtonText: {
-    color: '#cca702',
-    fontSize: 18,
-    fontWeight: '600',
-  },
-  buttonIcon: {
-    marginRight: 10,
-  },
-  
-  // Modal Styles
-  modalOverlay: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 20,
-  },
-  modalContent: {
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    padding: 20,
-    width: '90%',
-    maxHeight: '80%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-  },
-  modalHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    marginBottom: 15,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  closeButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: '#f0f0f0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  imagePreviewContainer: {
-    width: '100%',
-    height: 400,
-    marginBottom: 20,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#f8f8f8',
-  },
-  imagePreview: {
-    width: '100%',
-    height: '100%',
-  },
-  analyzeButton: {
-    backgroundColor: '#cca702',
-    borderRadius: 12,
-    paddingVertical: 14,
-    paddingHorizontal: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '100%',
-    marginTop: 10,
-  },
-  analyzeButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-});

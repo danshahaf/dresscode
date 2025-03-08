@@ -1,6 +1,6 @@
 module.exports = {
   expo: {
-    name: 'dresscode',
+    name: 'Dresscode AI',
     slug: 'dresscode',
     version: '1.0.0',
     orientation: 'portrait',
@@ -10,9 +10,10 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      "bundleIdentifier": "com.example.dresscodeapp"
+      bundleIdentifier: 'com.seagulltechnologies.dresscodeapp'
     },
     android: {
+      package: 'com.seagulltechnologies.dresscodeapp',
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff'
@@ -28,10 +29,10 @@ module.exports = {
       [
         'expo-splash-screen',
         {
-          'image': './assets/images/splash-icon.png',
-          'imageWidth': 200,
-          'resizeMode': 'contain',
-          'backgroundColor': '#ffffff'
+          image: './assets/images/splash-icon.png',
+          imageWidth: 200,
+          resizeMode: 'contain',
+          backgroundColor: '#ffffff'
         }
       ]
     ],
@@ -42,8 +43,8 @@ module.exports = {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
       eas: {
-        projectId: "your-project-id"
+        projectId: "555c44d3-648a-41cd-b752-fe2407cee206"
       }
     }
   }
-}; 
+};

@@ -2,13 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
-  TextInput,
   TouchableOpacity,
   Image,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
   Dimensions,
   ActivityIndicator,
   Alert
@@ -16,240 +11,197 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Link, useRouter } from 'expo-router';
-import { SafeAreaView } from 'react-native-safe-area-context';
-import { Ionicons } from '@expo/vector-icons';
-import { supabase, signIn, signUp, signInWithGoogle, signInWithApple } from '@/lib/supabase';
+import { useRouter } from 'expo-router';
+import { supabase, signInWithGoogle, signInWithApple } from '@/lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
 import * as Linking from 'expo-linking';
+import { Ionicons } from '@expo/vector-icons';
+import { styles } from '@/app/styles/login.styles';
+import { InfoModal } from '@/app/components/profile/InfoModal';
+import { TermsOfServiceContent } from '@/app/components/profile/TermsOfServiceContent';
+import { PrivacyPolicyContent } from '@/app/components/profile/PrivacyPolicyContent';
 
 const { width, height } = Dimensions.get('window');
-const appleRedirectUrl = 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback';
+
+const redirectUrl = makeRedirectUri({
+  scheme: 'dresscode',
+  path: 'auth/callback',
+});
+
+// App brand colors
+const BRAND_GOLD = '#cca702';
 
 // Enable WebBrowser redirect handling
 WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
-  const [isLogin, setIsLogin] = useState(true);
-  const [isLoading, setIsLoading] = useState(false);
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
-  
-  // Form state
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [name, setName] = useState('');
-  const [passwordVisible, setPasswordVisible] = useState(false);
-  
-  // Check for existing session on load
+  const [initialCheckDone, setInitialCheckDone] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
+  const [privacyVisible, setPrivacyVisible] = useState(false);
+
+  // Define a shared deep link handler to parse tokens and call checkUserProfile
+  const handleDeepLink = async (event: { url: string }) => {
+    console.log('Deep link received:', event.url);
+    // If URL has a fragment after '#' (contains tokens)
+    const parts = event.url.split('#');
+    if (parts.length > 1) {
+      const fragment = parts[1];
+      const params = new URLSearchParams(fragment);
+      const access_token = params.get('access_token');
+      const refresh_token = params.get('refresh_token');
+      if (access_token && refresh_token) {
+        console.log('Parsed tokens:', { access_token, refresh_token });
+        try {
+          const { data, error } = await supabase.auth.setSession({
+            access_token,
+            refresh_token,
+          });
+          if (error) {
+            console.error('Error setting session:', error);
+          } else {
+            console.log('Session set successfully:', data);
+          }
+        } catch (err) {
+          console.error('Exception setting session:', err);
+        }
+      }
+    }
+    // Continue to check user profile
+    await checkUserProfile();
+  };
+
+  // Check for an existing session on load
   useEffect(() => {
     const checkSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (data.session) {
-        // User is already logged in, redirect to main app
-        router.replace('/(tabs)');
+      try {
+        const { data, error } = await supabase.auth.getSession();
+        if (error) {
+          console.error('Error checking session:', error);
+          setInitialCheckDone(true);
+          return;
+        }
+        if (data.session) {
+          console.log('Existing session found');
+          await checkUserProfile();
+        } else {
+          console.log('No existing session');
+          setInitialCheckDone(true);
+        }
+      } catch (error) {
+        console.error('Unexpected error checking session:', error);
+        setInitialCheckDone(true);
       }
     };
-    
     checkSession();
   }, []);
 
-  // Set up deep link handling for OAuth
+  // Set up deep link event listener
   useEffect(() => {
-    const handleDeepLink = (event: { url: string }) => {
-      // Handle the deep link
-      if (event.url.includes('auth/callback')) {
-        // The URL contains our auth callback
-        // Supabase Auth will automatically handle the token exchange
-        checkUserProfile();
-      }
-    };
-
-    // Add event listener for deep links
     const subscription = Linking.addEventListener('url', handleDeepLink);
-
     return () => {
       subscription.remove();
     };
   }, []);
-  
+
+  // Check initial URL in case the app was launched with a deep link
+  useEffect(() => {
+    async function checkInitialURL() {
+      const initialUrl = await Linking.getInitialURL();
+      if (initialUrl) {
+        console.log('Initial deep link URL:', initialUrl);
+        await handleDeepLink({ url: initialUrl });
+      }
+    }
+    checkInitialURL();
+  }, []);
+
   // Check if user has a profile and redirect accordingly
   const checkUserProfile = async () => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      
+      const { data: userData, error: userError } = await supabase.auth.getUser();
+      if (userError) {
+        console.error('Error getting user:', userError);
+        setInitialCheckDone(true);
+        return;
+      }
+      console.log('User Session:', userData);
       if (userData.user) {
         const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
+          .from('profiles')
           .select('*')
           .eq('user_id', userData.user.id)
           .single();
-          
-        if (profileError && profileError.code !== 'PGRST116') {
-          throw profileError;
-        }
-        
-        // If no profile exists, redirect to profile setup
-        if (!profileData) {
-          router.replace('/(auth)/profile-setup');
+        if (profileError) {
+          if (profileError.code === 'PGRST116') {
+            console.log('No profile found, redirecting to profile setup');
+            router.replace('/(auth)/profile-setup');
+          } else {
+            console.error('Error checking profile:', profileError);
+            setInitialCheckDone(true);
+          }
           return;
         }
-        
-        // If profile exists, go to main app
+        console.log('Profile found, redirecting to main app');
         router.replace('/(tabs)');
+      } else {
+        setInitialCheckDone(true);
       }
     } catch (error) {
       console.error('Error checking user profile:', error);
+      setInitialCheckDone(true);
     }
   };
-  
-  // Handle authentication
-  const handleAuth = async () => {
-    // Validate form
-    if (!email.trim()) {
-      Alert.alert('Error', 'Please enter your email');
-      return;
-    }
-    
-    if (!password.trim()) {
-      Alert.alert('Error', 'Please enter your password');
-      return;
-    }
-    
-    if (!isLogin && !name.trim()) {
-      Alert.alert('Error', 'Please enter your name');
-      return;
-    }
-    
-    try {
-      setIsLoading(true);
-      
-      if (isLogin) {
-        // Sign in
-        const { data, error } = await signIn(email, password);
-        
-        if (error) throw error;
-        
-        // Check if user has a profile
-        const { data: profileData, error: profileError } = await supabase
-          .from('user_profiles')
-          .select('*')
-          .eq('user_id', data.user?.id)
-          .single();
-          
-        if (profileError && profileError.code !== 'PGRST116') {
-          // PGRST116 is "no rows returned" error, which is expected if no profile exists
-          throw profileError;
-        }
-        
-        // If no profile exists, redirect to profile setup
-        if (!profileData) {
-          router.replace('/(auth)/profile-setup');
-          return;
-        }
-        
-        // If profile exists, go to main app
-        router.replace('/(tabs)');
-      } else {
-        // Sign up
-        const { data, error } = await signUp(email, password, { full_name: name });
-        
-        if (error) throw error;
-        
-        // If sign up successful but needs email confirmation
-        if (data.user && data.session === null) {
-          Alert.alert(
-            'Verification Email Sent',
-            'Please check your email to verify your account before logging in.'
-          );
-          setIsLogin(true); // Switch to login view
-          setPassword('');
-          return;
-        }
-        
-        // If sign up successful and session created, go to profile setup
-        if (data.user && data.session) {
-          router.replace('/(auth)/profile-setup');
-          return;
-        }
-      }
-      
-    } catch (error: any) {
-      Alert.alert(
-        'Authentication Error',
-        error.message || 'There was a problem authenticating. Please try again.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
-  };
-  
-  // Handle social sign-in
+
+  // Handle social sign-in flows
   const handleSocialSignIn = async (provider: 'google' | 'apple') => {
     try {
       setSocialLoading(provider);
-      
-      // Get the redirect URL for deep linking
-      const redirectUrl = makeRedirectUri({
-        scheme: 'dresscode',
-        path: 'auth/callback',
-      });
-      
+      console.log('Starting sign-in with', provider);
       console.log('Redirect URL:', redirectUrl);
-      
-      // Start the OAuth flow
       if (provider === 'google') {
         const { data, error } = await signInWithGoogle();
-        
         if (error) {
           console.error('Google sign-in error:', error);
           throw error;
         }
-        
-        // Open the browser for authentication
         if (data?.url) {
           console.log('Opening browser with URL:', data.url);
           const result = await WebBrowser.openAuthSessionAsync(
             data.url,
             redirectUrl
           );
-          
           console.log('Browser result:', result);
-          
-          if (result.type === 'success') {
-            // The user was redirected back to our app
-            // Supabase Auth will automatically handle the token exchange
+          if (result.type === 'success' && result.url) {
+            await handleDeepLink({ url: result.url });
+          } else if (result.type === 'success') {
             await checkUserProfile();
           }
         }
       } else if (provider === 'apple') {
         const { data, error } = await signInWithApple();
-        
         if (error) {
           console.error('Apple sign-in error:', error);
           throw error;
         }
-        
-        // Open the browser for authentication
         if (data?.url) {
           console.log('Opening browser with URL:', data.url);
-          const result = await WebBrowser.openAuthSessionAsync(data.url, appleRedirectUrl);
-          
+          const result = await WebBrowser.openAuthSessionAsync(
+            data.url,
+            redirectUrl
+          );
           console.log('Browser result:', result);
-          
-          if (result.type === 'success') {
-            // The user was redirected back to our app
-            // Supabase Auth will automatically handle the token exchange
+          if (result.type === 'success' && result.url) {
+            await handleDeepLink({ url: result.url });
+          } else if (result.type === 'success') {
             await checkUserProfile();
           }
         }
       }
-      
     } catch (error: any) {
       console.error(`Error signing in with ${provider}:`, error);
-      
-      // If provider is not enabled, offer demo mode
       if (error.message && error.message.includes('provider is not enabled')) {
         Alert.alert(
           "OAuth Configuration Issue",
@@ -278,331 +230,111 @@ export default function LoginScreen() {
       setSocialLoading(null);
     }
   };
-  
-  // Toggle between login and signup
-  const toggleAuthMode = () => {
-    setIsLogin(!isLogin);
-    // Clear form when switching modes
-    setPassword('');
-  };
-  
+
   // Skip login for demo purposes
   const handleSkip = () => {
-    // Bypass authentication and go directly to main app
     global.demoMode = true;
     router.replace('/(tabs)');
   };
-  
+
+  // Show loading screen while checking for existing session
+  if (!initialCheckDone && !socialLoading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={BRAND_GOLD} />
+        <Text style={styles.loadingText}>Checking login status...</Text>
+      </View>
+    );
+  }
+
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1 }}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <ScrollView style={styles.container} contentContainerStyle={{ flexGrow: 1 }}>
-        {/* Background Image */}
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1490481651871-ab68de25d43d?q=80&w=2070' }}
-          style={styles.backgroundImage}
-        />
-        
-        {/* Gradient Overlay */}
-        <LinearGradient
-          colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.7)']}
-          style={styles.gradient}
-        />
-        
-        {/* Content */}
-        <View style={styles.content}>
-          {/* Logo/App Name */}
-          <View style={styles.logoContainer}>
-            <Text style={styles.logoText}>STYLIST</Text>
-            <Text style={styles.tagline}>Your AI Fashion Assistant</Text>
-          </View>
-          
-          {/* Auth Form */}
-          <BlurView intensity={30} tint="dark" style={styles.formContainer}>
-            <Text style={styles.formTitle}>{isLogin ? 'Sign In' : 'Create Account'}</Text>
-            
-            {/* Name Input (Sign Up only) */}
-            {!isLogin && (
-              <View style={styles.inputWrapper}>
-                <IconSymbol name="person" size={20} color="#fff" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  placeholder="Full Name"
-                  placeholderTextColor="rgba(255,255,255,0.7)"
-                  value={name}
-                  onChangeText={setName}
-                />
-              </View>
-            )}
-            
-            {/* Email Input */}
-            <View style={styles.inputWrapper}>
-              <IconSymbol name="envelope" size={20} color="#fff" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Email"
-                placeholderTextColor="rgba(255,255,255,0.7)"
-                value={email}
-                onChangeText={setEmail}
-                keyboardType="email-address"
-                autoCapitalize="none"
-              />
-            </View>
-            
-            {/* Password Input */}
-            <View style={styles.inputWrapper}>
-              <IconSymbol name="lock" size={20} color="#fff" style={styles.inputIcon} />
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                placeholderTextColor="rgba(255,255,255,0.7)"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={!passwordVisible}
-              />
-              <TouchableOpacity 
-                onPress={() => setPasswordVisible(!passwordVisible)}
-                style={styles.eyeIcon}
-              >
-                <IconSymbol 
-                  name={passwordVisible ? "eye.slash" : "eye"} 
-                  size={20} 
-                  color="#fff" 
-                />
-              </TouchableOpacity>
-            </View>
-            
-            {/* Forgot Password (Login only) */}
-            {isLogin && (
-              <TouchableOpacity 
-                style={styles.forgotPasswordButton}
-                onPress={() => Alert.alert(
-                  'Reset Password',
-                  'Enter your email to receive a password reset link',
-                  [
-                    { text: 'Cancel', style: 'cancel' },
-                    { 
-                      text: 'Send Link', 
-                      onPress: () => {
-                        if (email) {
-                          supabase.auth.resetPasswordForEmail(email, {
-                            redirectTo: 'dresscode://reset-password',
-                          });
-                          Alert.alert('Password Reset', 'Check your email for a password reset link');
-                        } else {
-                          Alert.alert('Error', 'Please enter your email first');
-                        }
-                      } 
-                    },
-                  ]
-                )}
-              >
-                <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
-              </TouchableOpacity>
-            )}
-            
-            {/* Submit Button */}
-            <TouchableOpacity 
-              style={styles.submitButton}
-              onPress={handleAuth}
-              disabled={isLoading}
+    <View style={styles.container}>
+      {/* Background Image */}
+      <Image
+        source={require('../../assets/images/cover-dresscode-3.png')}
+        style={styles.backgroundImage}
+      />
+      {/* Gradient Overlay */}
+      <LinearGradient
+        colors={['rgba(0,0,0,0.1)', 'rgba(0,0,0,0.2)']}
+        style={styles.gradient}
+      />
+      {/* Content */}
+      <View style={styles.content}>
+        {/* Logo/App Name */}
+        <View style={styles.logoContainer}>
+          <Text style={styles.logoText}>Dresscode AI</Text>
+          <Text style={styles.tagline}>Your AI Fashion Assistant</Text>
+        </View>
+        {/* Auth Options */}
+        <BlurView intensity={15} tint="light" style={styles.authContainer}>
+          <Text style={styles.subtitleText}>Sign in to track your style journey</Text>
+          {/* Social Sign In Buttons */}
+          <View style={styles.socialButtonsContainer}>
+            <TouchableOpacity
+              style={[styles.socialButton, styles.googleButton]}
+              onPress={() => handleSocialSignIn('google')}
+              disabled={!!socialLoading}
             >
-              {isLoading ? (
-                <ActivityIndicator color="#fff" />
+              {socialLoading === 'google' ? (
+                <ActivityIndicator color="#fff" size="small" />
               ) : (
-                <Text style={styles.submitButtonText}>
-                  {isLogin ? 'Sign In' : 'Create Account'}
-                </Text>
+                <>
+                  <View style={styles.googleIconContainer}>
+                    <Text style={styles.googleIconText}>G</Text>
+                  </View>
+                  <Text style={styles.socialButtonText}>Continue with Google</Text>
+                </>
               )}
             </TouchableOpacity>
-            
-            {/* Social Login */}
-            <View style={styles.socialContainer}>
-              <Text style={styles.socialText}>Or continue with</Text>
-              <View style={styles.socialButtons}>
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialSignIn('google')}
-                  disabled={socialLoading !== null}
-                >
-                  {socialLoading === 'google' ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <Ionicons name="logo-google" size={24} color="#fff" />
-                  )}
-                </TouchableOpacity>
-                
-                <TouchableOpacity 
-                  style={styles.socialButton}
-                  onPress={() => handleSocialSignIn('apple')}
-                  disabled={socialLoading !== null}
-                >
-                  {socialLoading === 'apple' ? (
-                    <ActivityIndicator color="#fff" size="small" />
-                  ) : (
-                    <IconSymbol name="apple.logo" size={24} color="#fff" />
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-            
-            {/* Toggle Login/Signup */}
-            <View style={styles.toggleContainer}>
-              <Text style={styles.toggleText}>
-                {isLogin ? "Don't have an account?" : "Already have an account?"}
-              </Text>
-              <TouchableOpacity onPress={toggleAuthMode}>
-                <Text style={styles.toggleButton}>
-                  {isLogin ? 'Sign Up' : 'Sign In'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </BlurView>
-          
-          {/* Skip Button (for demo) */}
-          <TouchableOpacity style={styles.skipButton} onPress={handleSkip}>
-            <Text style={styles.skipButtonText}>Skip for now</Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+            <TouchableOpacity
+              style={[styles.socialButton, styles.appleButton]}
+              onPress={() => handleSocialSignIn('apple')}
+              disabled={!!socialLoading}
+            >
+              {socialLoading === 'apple' ? (
+                <ActivityIndicator color="#fff" size="small" />
+              ) : (
+                <>
+                  <Ionicons name="logo-apple" size={22} color="#fff" style={styles.appleIcon} />
+                  <Text style={styles.socialButtonText}>Continue with Apple</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+          {/* Privacy Policy */}
+          <Text style={styles.privacyText}>
+            By continuing, you agree to our{' '}
+            <Text 
+              style={[styles.privacyText, styles.link]}
+              onPress={() => setTermsVisible(true)}
+            >
+              Terms of Service
+            </Text>
+            {' '}and{' '}
+            <Text
+              style={[styles.privacyText, styles.link]} 
+              onPress={() => setPrivacyVisible(true)}
+            >
+              Privacy Policy
+            </Text>
+          </Text>
+        </BlurView>
+      </View>
+      {/* Terms of Service Modal */}
+      <InfoModal
+        visible={termsVisible}
+        onClose={() => setTermsVisible(false)}
+        title="Terms of Service"
+        content={<TermsOfServiceContent />}
+      />
+      {/* Privacy Policy Modal */}
+      <InfoModal
+        visible={privacyVisible}
+        onClose={() => setPrivacyVisible(false)}
+        title="Privacy Policy"
+        content={<PrivacyPolicyContent />}
+      />
+    </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#000',
-  },
-  backgroundImage: {
-    position: 'absolute',
-    width: width,
-    height: height,
-    resizeMode: 'cover',
-  },
-  gradient: {
-    position: 'absolute',
-    left: 0,
-    right: 0,
-    top: 0,
-    height: height,
-  },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
-    padding: 20,
-  },
-  logoContainer: {
-    alignItems: 'center',
-    marginBottom: 40,
-  },
-  logoText: {
-    fontSize: 36,
-    fontWeight: 'bold',
-    color: '#fff',
-    letterSpacing: 2,
-  },
-  tagline: {
-    fontSize: 16,
-    color: 'rgba(255,255,255,0.8)',
-    marginTop: 5,
-  },
-  formContainer: {
-    borderRadius: 20,
-    padding: 20,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.3)',
-  },
-  formTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  inputWrapper: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255,255,255,0.3)',
-    marginBottom: 20,
-    paddingBottom: 10,
-  },
-  inputIcon: {
-    marginRight: 10,
-  },
-  input: {
-    flex: 1,
-    color: '#fff',
-    fontSize: 16,
-  },
-  eyeIcon: {
-    padding: 5,
-  },
-  forgotPasswordButton: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    color: '#cca702',
-    fontSize: 14,
-  },
-  submitButton: {
-    backgroundColor: '#cca702',
-    borderRadius: 30,
-    height: 50,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  submitButtonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  socialContainer: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  socialText: {
-    color: 'rgba(255,255,255,0.7)',
-    marginBottom: 15,
-  },
-  socialButtons: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-  },
-  socialButton: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginHorizontal: 10,
-  },
-  toggleContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  toggleText: {
-    color: 'rgba(255,255,255,0.7)',
-  },
-  toggleButton: {
-    color: '#cca702',
-    fontWeight: 'bold',
-    marginLeft: 5,
-  },
-  skipButton: {
-    alignSelf: 'center',
-    marginTop: 20,
-    padding: 10,
-  },
-  skipButtonText: {
-    color: 'rgba(255,255,255,0.6)',
-    fontSize: 14,
-  },
-}); 

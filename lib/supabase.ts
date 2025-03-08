@@ -20,12 +20,10 @@ const appleRedirectUrl = 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callb
 
 // Get environment variables with fallbacks
 const supabaseUrl = Constants.expoConfig?.extra?.supabaseUrl || 
-  process.env.EXPO_PUBLIC_SUPABASE_URL || 
-  'https://etwwfjctkahkhltzvlvx.supabase.co';
+  process.env.EXPO_PUBLIC_SUPABASE_URL;
 
 const supabaseAnonKey = Constants.expoConfig?.extra?.supabaseAnonKey || 
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY || 
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImV0d3dmamN0a2Foa2hsdHp2bHZ4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDA5MzMxOTksImV4cCI6MjA1NjUwOTE5OX0.xM9XzWVV8GYx4m1RHQ3Z7BJdOIZq0vKr7O3LQvXqwAA';
+  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY;
 
 // Initialize Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
@@ -93,7 +91,7 @@ export const signInWithApple = async () => {
   return supabase.auth.signInWithOAuth({
     provider: 'apple',
     options: {
-      redirectTo: 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback',
+      redirectTo: 'dresscode://auth/callback',
     },
   });
 };

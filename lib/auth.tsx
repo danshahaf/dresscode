@@ -41,17 +41,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
   useEffect(() => {
     if (loading) return;
 
+    console.log('Current navigation segment:', segments[0]);
+    console.log('Session exists:', !!session);
+    console.log('Demo mode:', !!global.demoMode);
+
     // Check for demo mode using global variable
     if (global.demoMode) {
+      console.log('In demo mode, navigating to tabs');
+      // If in demo mode, make sure we're in the tabs
+      if (segments[0] !== '(tabs)') {
+        router.replace('/(tabs)');
+      }
       return;
     }
     
     const inAuthGroup = segments[0] === '(auth)';
     
     if (!session && !inAuthGroup) {
+      console.log('No session and not in auth group, redirecting to login');
       // If not logged in and not in auth group, redirect to login
       router.replace('/(auth)/login');
     } else if (session && inAuthGroup) {
+      console.log('Session exists and in auth group, redirecting to tabs');
       // If logged in and in auth group, redirect to main app
       router.replace('/(tabs)');
     }
