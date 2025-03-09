@@ -3,10 +3,12 @@ import {
   View, 
   Text, 
   TouchableOpacity, 
-  Modal 
+  Modal, 
+  Alert 
 } from 'react-native';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { subscriptionStyles } from '@/app/styles/profile.styles';
+import { useStripe } from '@stripe/stripe-react-native';
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -19,6 +21,47 @@ export const SubscriptionModal = ({
   onClose, 
   currentPlan 
 }: SubscriptionModalProps) => {
+  // Cast useStripe() to any so that presentApplePay is recognized.
+  const { presentApplePay } = useStripe() as any;
+
+  // Handler for monthly plan
+  const handleApplePayMonthly = async () => {
+    console.log('Monthly Apple Pay button pressed');
+    const { error } = await presentApplePay({
+      cartItems: [
+        { label: 'Premium Monthly Subscription', amount: '5.99', type: 'final' }
+      ],
+      country: 'US',
+      currency: 'USD',
+    });
+
+    if (error) {
+      console.error('Apple Pay error:', error);
+      Alert.alert('Error', 'Apple Pay failed. Please try again.');
+      return;
+    }
+    Alert.alert('Success', 'Apple Pay completed for Monthly plan. Proceeding to create subscription...');
+  };
+
+  // Handler for yearly plan
+  const handleApplePayYearly = async () => {
+    console.log('Yearly Apple Pay button pressed');
+    const { error } = await presentApplePay({
+      cartItems: [
+        { label: 'Premium Yearly Subscription', amount: '59.99', type: 'final' }
+      ],
+      country: 'US',
+      currency: 'USD',
+    });
+
+    if (error) {
+      console.error('Apple Pay error:', error);
+      Alert.alert('Error', 'Apple Pay failed. Please try again.');
+      return;
+    }
+    Alert.alert('Success', 'Apple Pay completed for Yearly plan. Proceeding to create subscription...');
+  };
+
   return (
     <Modal
       animationType="slide"
@@ -51,19 +94,15 @@ export const SubscriptionModal = ({
                 subscriptionStyles.planOption, 
                 currentPlan === 'Premium Plan' && subscriptionStyles.selectedPlan
               ]}
+              onPress={handleApplePayMonthly}
             >
               <View style={subscriptionStyles.planOptionHeader}>
                 <Text style={subscriptionStyles.planName}>Premium Monthly</Text>
-                <Text style={subscriptionStyles.planPrice}>$9.99/month</Text>
+                <Text style={subscriptionStyles.planPrice}>$5.99/month</Text>
               </View>
               <Text style={subscriptionStyles.planDescription}>
                 Full access to all features with monthly billing
               </Text>
-              {/* {currentPlan === 'Premium Plan' && (
-                <View style={subscriptionStyles.currentPlanBadge}>
-                  <Text style={subscriptionStyles.currentPlanBadgeText}>Current Plan</Text>
-                </View>
-              )} */}
             </TouchableOpacity>
             
             <TouchableOpacity 
@@ -71,24 +110,20 @@ export const SubscriptionModal = ({
                 subscriptionStyles.planOption, 
                 currentPlan === 'Premium Yearly' && subscriptionStyles.selectedPlan
               ]}
+              onPress={handleApplePayYearly}
             >
               <View style={subscriptionStyles.planOptionHeader}>
                 <Text style={subscriptionStyles.planName}>Premium Yearly</Text>
-                <Text style={subscriptionStyles.planPrice}>$89.99/year</Text>
+                <Text style={subscriptionStyles.planPrice}>$59.99/year</Text>
               </View>
-              <Text style={subscriptionStyles.planDescription}>
-                Save 25% with annual billing
+              <Text style={[subscriptionStyles.planDescription, { color: 'green', fontWeight: 'bold' }]}>
+                Save 17% with annual billing
               </Text>
               {currentPlan === 'Premium Yearly' && (
                 <View style={subscriptionStyles.currentPlanBadge}>
                   <Text style={subscriptionStyles.currentPlanBadgeText}>Current Plan</Text>
                 </View>
               )}
-              {/* {currentPlan !== 'Premium Yearly' && (
-                <View style={subscriptionStyles.savingBadge}>
-                  <Text style={subscriptionStyles.savingBadgeText}>Save 25%</Text>
-                </View>
-              )} */}
             </TouchableOpacity>
           </View>
           
@@ -100,4 +135,4 @@ export const SubscriptionModal = ({
       </View>
     </Modal>
   );
-}; 
+};

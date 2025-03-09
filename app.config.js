@@ -10,7 +10,12 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.seagulltechnologies.dresscodeapp'
+      bundleIdentifier: 'com.seagulltechnologies.dresscodeapp',
+      "entitlements": {
+        "com.apple.developer.in-app-payments": [
+          "merchant.com.dresscode"
+        ]
+      }
     },
     android: {
       package: 'com.seagulltechnologies.dresscodeapp',

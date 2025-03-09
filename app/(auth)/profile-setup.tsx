@@ -115,7 +115,7 @@ export default function ProfileSetupScreen() {
 
       // Create user profile in database
       const { error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .insert({
           user_id: userId,
           age: parseInt(age),
@@ -148,7 +148,7 @@ export default function ProfileSetupScreen() {
       
       // Create minimal profile with just required fields
       const { error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .insert({
           user_id: userId,
           age: age ? parseInt(age) : 25, // Default age

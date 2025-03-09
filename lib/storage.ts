@@ -2,6 +2,10 @@ import { supabase } from './supabase';
 import { decode } from 'base64-arraybuffer';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
+import OpenAI from 'openai';
+
+const openai = new OpenAI({apiKey: `${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`});
+
 
 // Function to get a score for an outfit using a mock implementation
 // In a real app, you would use OpenAI's API directly with fetch
@@ -19,29 +23,22 @@ async function getOutfitScore(imageUrl: string): Promise<number> {
     
     
     // Example of how you would call OpenAI API directly with fetch:
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: "gpt-4-vision-preview",
+    const response = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
         messages: [
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Rate this outfit on a scale from 0 to 100 based on style, fit, color coordination, and overall aesthetic. Only respond with a number between 0 and 100." },
-              { type: "image_url", image_url: { url: imageUrl } }
-            ],
-          },
+            {
+                role: "user",
+                content: [
+                    { type: "text", text: "Rate this outfit on a scale from 0 to 100 based on style, fit, color coordination, and overall aesthetic. Only respond with a number between 0 and 100." },
+                    { type: "image_url", image_url: { url: imageUrl } }
+                ],
+            },
         ],
-        max_tokens: 10,
-      })
+        store: true,
     });
     
-    const data = await response.json();
-    const scoreText = data.choices[0]?.message?.content?.trim() || "70";
+    console.log(response);
+    const scoreText = response.choices[0]?.message?.content?.trim() || "-1";
     const scoreMatch = scoreText.match(/\d+/);
     return scoreMatch ? parseInt(scoreMatch[0], 10) : 70;
     
@@ -62,19 +59,9 @@ export async function uploadOutfitImage(
   try {
     console.log('Starting image upload process for user:', userId);
     
-    // 1. Check if the user's bucket exists, create if not
-    const bucketName = `user_${userId}_outfits`;
-    const { data: buckets } = await supabase.storage.listBuckets();
-    
-    const bucketExists = buckets?.some(bucket => bucket.name === bucketName);
-    
-    if (!bucketExists) {
-      console.log('Creating new bucket for user:', bucketName);
-      await supabase.storage.createBucket(bucketName, {
-        public: true, // Make it public so we can access the images
-        fileSizeLimit: 5242880, // 5MB
-      });
-    }
+    // 1. Use a single 'outfits' bucket with user-specific folders
+    const bucketName = 'outfits'; // Single bucket for all outfit images
+    const userFolderPath = `${userId}/`; // User-specific folder within the bucket
     
     // 2. Get the next image ID by checking existing outfits
     const { data: existingOutfits, error: queryError } = await supabase
@@ -93,8 +80,12 @@ export async function uploadOutfitImage(
       ? existingOutfits[0].id + 1 
       : 1;
     
+    // Create a simple filename without timestamp
     const fileName = `outfit_${nextId}.jpg`;
-    console.log('Next outfit ID:', nextId, 'Filename:', fileName);
+    // Full path including user folder
+    const filePath = `${userFolderPath}${fileName}`;
+    
+    console.log('Next outfit ID:', nextId, 'File path:', filePath);
     
     // 3. Prepare the image for upload
     let base64Image;
@@ -132,9 +123,9 @@ export async function uploadOutfitImage(
     // 4. Upload the image to Supabase Storage
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from(bucketName)
-      .upload(fileName, decode(base64Image as string), {
+      .upload(filePath, decode(base64Image as string), {
         contentType: 'image/jpeg',
-        upsert: false,
+        upsert: true, // Overwrite if needed
       });
     
     if (uploadError) {
@@ -147,7 +138,7 @@ export async function uploadOutfitImage(
     // 5. Get the public URL for the uploaded image
     const { data: publicUrlData } = supabase.storage
       .from(bucketName)
-      .getPublicUrl(fileName);
+      .getPublicUrl(filePath);
     
     const imageUrl = publicUrlData.publicUrl;
     console.log('Public URL for image:', imageUrl);
@@ -165,7 +156,7 @@ export async function uploadOutfitImage(
           user_id: userId,
           image_url: imageUrl,
           score: score,
-          location: location,
+        //   location: location,
           created_at: new Date().toISOString(),
         }
       ])

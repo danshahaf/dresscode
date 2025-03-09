@@ -85,7 +85,7 @@ export default function ProfileScreen() {
         // Get user profile data
         if (userData?.user?.id) {
           const { data: profileData, error } = await supabase
-            .from('user_profiles')
+            .from('profiles')
             .select('*')
             .eq('user_id', userData.user.id)
             .single();
@@ -127,10 +127,16 @@ export default function ProfileScreen() {
   // Prepare user data with profile image handling
   const getUserProfileImage = () => {
     try {
-      if (userProfile?.profile_image_url) {
-        return { uri: userProfile.profile_image_url };
+      console.log('Profile image URL from DB:', userProfile?.profile_image);
+      
+      if (userProfile?.profile_image) {
+        // Make sure the URL is valid and add cache-busting parameter
+        const imageUrl = `${userProfile.profile_image}?t=${Date.now()}`;
+        console.log('Using profile image URL with cache-busting:', imageUrl);
+        return { uri: imageUrl };
       }
       // Return the default image
+      console.log('Using default profile image');
       return DEFAULT_PROFILE_IMAGE;
     } catch (error) {
       console.error('Error getting profile image:', error);
@@ -138,12 +144,18 @@ export default function ProfileScreen() {
     }
   };
   
+  // Format height from feet and inches
+  const formatHeightFromDB = (feetVal: number | null, inchesVal: number | null) => {
+    if (feetVal === null || inchesVal === null) return '-';
+    return `${feetVal}'${inchesVal}"`;
+  };
+  
   // Mock user data - in a real app, this would come from your user state or API
   const [userData, setUserData] = useState({
     firstName: firstName,
     lastName: lastName,
     profileImage: getUserProfileImage(),
-    height: userProfile?.height ? `${Math.floor(userProfile.height/12)}'${userProfile.height%12}"` : '-',
+    height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
     location: userProfile?.location || '-',
     subscription: userProfile?.subscription_type || 'Free Plan',
     email: userEmail
@@ -152,15 +164,30 @@ export default function ProfileScreen() {
   // Update user data when profile is loaded
   useEffect(() => {
     if (userProfile || userEmail) {
+      console.log('Profile data loaded:', userProfile);
+      console.log('Height feet from DB:', userProfile?.height_feet);
+      console.log('Height inches from DB:', userProfile?.height_inches);
+      
       setUserData({
-        firstName: firstName,
-        lastName: lastName,
+        firstName: userProfile?.first_name || firstName,
+        lastName: userProfile?.last_name || lastName,
         profileImage: getUserProfileImage(),
-        height: userProfile?.height ? `${Math.floor(userProfile.height/12)}'${userProfile.height%12}"` : '-',
+        height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
         location: userProfile?.location || '-',
         subscription: userProfile?.subscription_type || 'Free Plan',
         email: userEmail
       });
+      
+      // Update feet and inches state from database values
+      if (userProfile?.height_feet !== null && userProfile?.height_feet !== undefined) {
+        setFeet(userProfile.height_feet.toString());
+        console.log('Setting feet to:', userProfile.height_feet.toString());
+      }
+      
+      if (userProfile?.height_inches !== null && userProfile?.height_inches !== undefined) {
+        setInches(userProfile.height_inches.toString());
+        console.log('Setting inches to:', userProfile.height_inches.toString());
+      }
     }
   }, [userProfile, userEmail]);
   
@@ -213,7 +240,7 @@ export default function ProfileScreen() {
   
   // Format height for display
   const getFormattedHeight = () => {
-    if (userData.height === '-') return '-';
+    if (!feet || !inches) return '-';
     return `${feet}'${inches}"`;
   };
   
@@ -222,16 +249,34 @@ export default function ProfileScreen() {
     firstName: string;
     lastName: string;
     location: string;
-    profileImage: string;
+    profileImage: any; // Changed from string to any to handle object with uri
   }) => {
     try {
       setLoading(true);
       
+      console.log('Received updated data:', updatedData);
+      
       // Format height string
       const formattedHeight = getFormattedHeight();
       
-      // Determine profile image (could be a string URL or a local require reference)
-      const profileImage = updatedData.profileImage || DEFAULT_PROFILE_IMAGE;
+      // Determine profile image (could be a string URL or an object with uri)
+      let profileImageValue;
+      
+      if (updatedData.profileImage) {
+        if (typeof updatedData.profileImage === 'string') {
+          profileImageValue = updatedData.profileImage;
+          console.log('Profile image is a string URL:', profileImageValue);
+        } else if (updatedData.profileImage.uri) {
+          profileImageValue = updatedData.profileImage.uri;
+          console.log('Profile image is an object with URI:', profileImageValue);
+        } else {
+          profileImageValue = DEFAULT_PROFILE_IMAGE;
+          console.log('Using default profile image (no valid image found)');
+        }
+      } else {
+        profileImageValue = DEFAULT_PROFILE_IMAGE;
+        console.log('No profile image provided, using default');
+      }
       
       // Update local state
       setUserData({
@@ -240,7 +285,9 @@ export default function ProfileScreen() {
         lastName: updatedData.lastName,
         height: formattedHeight,
         location: updatedData.location,
-        profileImage: profileImage
+        profileImage: typeof profileImageValue === 'string' 
+          ? { uri: profileImageValue } 
+          : profileImageValue
       });
       
       // Update form data
@@ -249,45 +296,86 @@ export default function ProfileScreen() {
         firstName: updatedData.firstName,
         lastName: updatedData.lastName,
         location: updatedData.location,
-        profileImage: typeof updatedData.profileImage === 'string' ? updatedData.profileImage : ''
+        profileImage: typeof profileImageValue === 'string' ? profileImageValue : ''
       });
       
       // Update profile in database if user is logged in
       if (user) {
-        const heightInInches = formattedHeight !== '-' ? 
-          (parseInt(feet) * 12) + parseInt(inches) : null;
+        const heightFeet = formattedHeight !== '-' ? parseInt(feet) : null;
+        const heightInches = formattedHeight !== '-' ? parseInt(inches) : null;
           
-        console.log('Updating profile with height:', heightInInches, 'inches');
-          
-        const { error } = await supabase
-          .from('user_profiles')
-          .update({
-            location: updatedData.location,
-            height: heightInInches,
-            // Only update profile image if it's a string URL (not a local asset)
-            ...(typeof updatedData.profileImage === 'string' && 
-               updatedData.profileImage !== userProfile?.profile_image_url ? 
-               { profile_image_url: updatedData.profileImage } : {})
-          })
+        console.log('Updating profile with height:', heightFeet, 'feet,', heightInches, 'inches');
+        console.log('User location:', updatedData.location);
+        
+        // Check if profile exists
+        const { data: existingProfile, error: checkError } = await supabase
+          .from('profiles')
+          .select('*')
           .eq('user_id', user.id);
           
+        if (checkError) {
+          console.error('Error checking profile existence:', checkError);
+        }
+        
+        const profileExists = existingProfile && existingProfile.length > 0;
+        console.log('Profile exists:', profileExists);
+        
+        // Prepare profile data
+        const profileData = {
+          first_name: updatedData.firstName,
+          last_name: updatedData.lastName,
+          location: updatedData.location,
+          height_feet: heightFeet,
+          height_inches: heightInches,
+          // Always update profile image if it's provided as a string URL
+          ...(typeof profileImageValue === 'string' ? 
+             { profile_image: profileImageValue } : {})
+        };
+        
+        console.log('Profile data to update:', profileData);
+        
+        let error;
+        
+        if (profileExists) {
+          // Update existing profile
+          const { error: updateError } = await supabase
+            .from('profiles')
+            .update(profileData)
+            .eq('user_id', user.id);
+            
+          error = updateError;
+        } else {
+          // Create new profile
+          const { error: insertError } = await supabase
+            .from('profiles')
+            .insert([
+              {
+                user_id: user.id,
+                ...profileData
+              }
+            ]);
+            
+          error = insertError;
+        }
+          
         if (error) {
-          console.error('Supabase update error:', error);
+          console.error('Supabase update/insert error:', error);
           throw error;
         }
         
         // Refresh user profile data after update
         const { data: refreshedProfile, error: refreshError } = await supabase
-          .from('user_profiles')
+          .from('profiles')
           .select('*')
-          .eq('user_id', user.id)
-          .single();
+          .eq('user_id', user.id);
           
         if (refreshError) {
           console.error('Error refreshing profile:', refreshError);
-        } else if (refreshedProfile) {
-          setUserProfile(refreshedProfile);
-          console.log('Updated profile:', refreshedProfile);
+        } else if (refreshedProfile && refreshedProfile.length > 0) {
+          setUserProfile(refreshedProfile[0]);
+          console.log('Updated profile:', refreshedProfile[0]);
+        } else {
+          console.log('No profile found after update/insert');
         }
       }
       
@@ -343,22 +431,6 @@ export default function ProfileScreen() {
         />
         
         <SafeAreaView style={profileScreenStyles.content} edges={['bottom', 'left', 'right']}>
-          {/* App Settings */}
-          <SettingsSection title="App Settings">
-            <ToggleSetting 
-              icon="bell" 
-              label="Notifications" 
-              value={formData.notifications}
-              onValueChange={(value) => handleChange('notifications', value)}
-            />
-            
-            <ToggleSetting 
-              icon="moon" 
-              label="Dark Mode" 
-              value={formData.darkMode}
-              onValueChange={(value) => handleChange('darkMode', value)}
-            />
-          </SettingsSection>
           
           {/* Account Settings */}
           <SettingsSection title="Account">
@@ -375,11 +447,13 @@ export default function ProfileScreen() {
               onManagePress={() => setShowSubscriptionModal(true)}
             />
 
-            <SettingItem 
-              icon="lock" 
-              label="Change Password" 
-              onPress={() => setShowChangePasswordModal(true)}
+            <ToggleSetting 
+              icon="bell" 
+              label="Notifications" 
+              value={formData.notifications}
+              onValueChange={(value) => handleChange('notifications', value)}
             />
+
           </SettingsSection>
           
           {/* Support & About */}

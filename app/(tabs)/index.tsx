@@ -9,12 +9,6 @@ import Constants from 'expo-constants';
 
 import { styles  } from '@/app/styles/scan';
 
-
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
-
 // Import the upload function
 import { uploadOutfitImage } from '@/lib/storage';
 import { useAuth } from '@/lib/auth';
@@ -330,7 +324,7 @@ export default function HomeScreen() {
               ) : (
                 <>
                   <IconSymbol size={20} name="sparkles" color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.analyzeButtonText}>Analyze Outfit</Text>
+                  <Text style={styles.analyzeButtonText}>Vibe Check</Text>
                 </>
               )}
             </TouchableOpacity>

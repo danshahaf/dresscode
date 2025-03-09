@@ -161,7 +161,7 @@ const styles = StyleSheet.create({
     width: width * 0.3,
   },
   pickerLabel: {
-    fontSize: 16,
+    fontSize: 12,
     color: '#666',
     marginBottom: 10,
   },
@@ -169,7 +169,7 @@ const styles = StyleSheet.create({
     height: 200,
   },
   pickerItem: {
-    paddingVertical: 12,
+    paddingVertical: 6,
     alignItems: 'center',
     justifyContent: 'center',
     width: width * 0.3,
@@ -189,7 +189,7 @@ const styles = StyleSheet.create({
   saveButton: {
     backgroundColor: '#cca702',
     borderRadius: 8,
-    padding: 15,
+    padding: 12,
     alignItems: 'center',
   },
   saveButtonText: {
