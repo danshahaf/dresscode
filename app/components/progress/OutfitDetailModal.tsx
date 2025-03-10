@@ -13,12 +13,9 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Outfit } from '@/app/data/progress.data';
+import { Outfit, mockStyleAnalysis } from '@/app/data/progress.data';
 import { progressStyles } from '@/app/styles/progress.styles';
-import { StyleAnalysisView } from './StyleAnalysisView';
-import { mockStyleAnalysis } from '@/app/data/progress.data';
 import { ScoreMeter } from './ScoreMeter';
-import { calculateOverallScore } from '@/app/utils/style-analysis';
 
 interface OutfitDetailModalProps {
   visible: boolean;
@@ -35,11 +32,11 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
   const modalOpacity = useRef(new Animated.Value(1)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
   
-  // Calculate image height based on scroll position
+  // Calculate image heights
   const fullImageHeight = Dimensions.get('window').height * 0.65;
   const collapsedImageHeight = Dimensions.get('window').height * 0.3;
   
-  // Create a sticky header effect
+  // Collapsible image height based on scroll
   const imageHeight = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [fullImageHeight, collapsedImageHeight],
@@ -49,7 +46,6 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
   // Handle AI critique button press
   const handleAiCritique = () => {
     setAiAnalysisLoading(true);
-    
     // Simulate API call delay
     setTimeout(() => {
       setAiAnalysisLoading(false);
@@ -57,56 +53,56 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
     }, 1500);
   };
   
-  // Enhanced pan responder for swipe to dismiss
+  // Create panResponder for swipe-to-dismiss gesture
   const panResponder = useRef(
     PanResponder.create({
-      onStartShouldSetPanResponder: () => true,
+      onStartShouldSetPanResponder: (evt, gestureState) => {
+        // Only activate if touch starts in the top 40% of the full image height
+        const { locationY } = evt.nativeEvent;
+        console.log('Pan responder start locationY:', locationY);
+        return locationY <= fullImageHeight * 0.4;
+      },
       onPanResponderMove: (evt, gestureState) => {
-        if (gestureState.dy > 0) { // Only allow downward swipes
+        if (gestureState.dy > 0) {
           modalY.setValue(gestureState.dy);
-          // Gradually reduce opacity as user swipes down
-          const newOpacity = 1 - (gestureState.dy / 400);
+          const newOpacity = 1 - gestureState.dy / 400;
           modalOpacity.setValue(newOpacity > 0 ? newOpacity : 0);
         }
       },
       onPanResponderRelease: (evt, gestureState) => {
-        if (gestureState.dy > 100) { // Threshold to dismiss
-          // Continue the animation to slide out
+        if (gestureState.dy > 100) {
           Animated.parallel([
             Animated.timing(modalY, {
               toValue: Dimensions.get('window').height,
               duration: 300,
-              useNativeDriver: true
+              useNativeDriver: true,
             }),
             Animated.timing(modalOpacity, {
               toValue: 0,
               duration: 300,
-              useNativeDriver: true
-            })
+              useNativeDriver: true,
+            }),
           ]).start(() => {
             onClose();
-            setAiAnalysisVisible(false);
-            // Reset animation values
             modalY.setValue(0);
             modalOpacity.setValue(1);
             scrollY.setValue(0);
           });
         } else {
-          // Spring back to original position
           Animated.parallel([
             Animated.spring(modalY, {
               toValue: 0,
               friction: 8,
-              useNativeDriver: true
+              useNativeDriver: true,
             }),
             Animated.timing(modalOpacity, {
               toValue: 1,
               duration: 150,
-              useNativeDriver: true
-            })
+              useNativeDriver: true,
+            }),
           ]).start();
         }
-      }
+      },
     })
   ).current;
   
@@ -126,10 +122,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
         <Animated.View 
           style={[
             progressStyles.modalContent,
-            { 
-              transform: [{ translateY: modalY }],
-              opacity: modalOpacity
-            }
+            { transform: [{ translateY: modalY }], opacity: modalOpacity }
           ]}
         >
           {/* Swipe indicator at top of modal */}
@@ -139,43 +132,45 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
           
           {/* Main content with collapsible header */}
           {!aiAnalysisVisible ? (
-            // Regular view when AI analysis is not visible
+            // Initial view before AI analysis
             <>
-              {/* Full-width image container */}
-              <View style={progressStyles.modalImageFullContainer}>
+              <Animated.View 
+                style={[
+                  progressStyles.modalImageFullContainer,
+                  { transform: [{ translateY: modalY }], opacity: modalOpacity }
+                ]}
+                {...panResponder.panHandlers}  // Attach panResponder here
+              >
                 <Image 
-                  source={{ uri: outfit.image }} 
+                  source={{ uri: outfit.imageUrl }} 
                   style={progressStyles.modalImageFull} 
                   resizeMode="cover"
                 />
-                
-                {/* Gradient overlay on image */}
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={progressStyles.imageGradient}
                 >
-                  {/* Date display */}
                   <View style={progressStyles.dateContainer}>
                     <IconSymbol size={16} name="calendar" color="#fff" />
                     <Text style={progressStyles.dateText}>
-                      {new Date(outfit.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
+                      {typeof outfit.date === 'string' && outfit.date.match(/^\d{4}-\d{2}-\d{2}/) 
+                        ? new Date(outfit.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })
+                        : outfit.date
+                      }
                     </Text>
                   </View>
-                  
-                  {/* Score circle */}
                   <View style={progressStyles.scoreCircleContainer}>
                     <View style={progressStyles.modalScoreCircle}>
                       <Text style={progressStyles.modalScoreText}>{outfit.score}</Text>
                     </View>
                   </View>
                 </LinearGradient>
-              </View>
+              </Animated.View>
               
-              {/* Bottom section with AI critique button */}
               <View style={progressStyles.modalBottomSection}>
                 <Text style={progressStyles.outfitTitle}>Outfit Details</Text>
                 <Text style={progressStyles.outfitDescription}>
@@ -198,39 +193,42 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
               </View>
             </>
           ) : (
-            // Fixed header layout with scrollable content
+            // AI analysis view
             <View style={progressStyles.fixedHeaderLayout}>
-              {/* Fixed image header that stays at 30% height */}
+              {/* Fixed image header with panResponder */}
               <Animated.View 
                 style={[
                   progressStyles.collapsibleImageContainer, 
-                  { height: imageHeight, position: 'absolute', top: 0, left: 0, right: 0, zIndex: 10 }
+                  { 
+                    height: imageHeight, 
+                    position: 'absolute', 
+                    top: 0, left: 0, right: 0, zIndex: 10 
+                  }
                 ]}
+                {...panResponder.panHandlers}  // Attach panResponder only to the fixed header
               >
                 <Image 
-                  source={{ uri: outfit.image }} 
+                  source={{ uri: outfit.imageUrl }} 
                   style={progressStyles.modalImageFull} 
                   resizeMode="cover"
                 />
-                
-                {/* Gradient overlay on image */}
                 <LinearGradient
                   colors={['transparent', 'rgba(0,0,0,0.7)']}
                   style={progressStyles.imageGradient}
                 >
-                  {/* Date display */}
                   <View style={progressStyles.dateContainer}>
                     <IconSymbol size={16} name="calendar" color="#fff" />
                     <Text style={progressStyles.dateText}>
-                      {new Date(outfit.date).toLocaleDateString('en-US', {
-                        month: 'short',
-                        day: 'numeric',
-                        year: 'numeric'
-                      })}
+                      {typeof outfit.date === 'string' && outfit.date.match(/^\d{4}-\d{2}-\d{2}/) 
+                        ? new Date(outfit.date).toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric',
+                            year: 'numeric'
+                          })
+                        : outfit.date
+                      }
                     </Text>
                   </View>
-                  
-                  {/* Score circle */}
                   <View style={progressStyles.scoreCircleContainer}>
                     <View style={progressStyles.modalScoreCircle}>
                       <Text style={progressStyles.modalScoreText}>{outfit.score}</Text>
@@ -239,12 +237,12 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                 </LinearGradient>
               </Animated.View>
               
-              {/* Scrollable content with padding to account for fixed header */}
+              {/* Scrollable AI analysis content; no panResponder attached here */}
               <Animated.ScrollView
                 style={progressStyles.collapsibleScrollView}
                 contentContainerStyle={{ 
-                  paddingTop: imageHeight, // Dynamic padding based on header height
-                  minHeight: Dimensions.get('window').height * 0.9 // Ensure enough content to scroll
+                  paddingTop: imageHeight,
+                  minHeight: Dimensions.get('window').height * 0.9
                 }}
                 showsVerticalScrollIndicator={false}
                 scrollEventThrottle={16}
@@ -252,13 +250,9 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   [{ nativeEvent: { contentOffset: { y: scrollY } } }],
                   { useNativeDriver: false }
                 )}
-                {...panResponder.panHandlers}
               >
-                {/* AI Analysis Content */}
                 <View style={progressStyles.analysisContentContainer}>
                   <Text style={progressStyles.aiAnalysisTitle}>Style Analysis</Text>
-                  
-                  {/* AI Summary */}
                   <View style={progressStyles.aiSummaryContainer}>
                     <Text style={progressStyles.aiSummaryText}>
                       This outfit shows a good understanding of color coordination and style coherence. 
@@ -266,26 +260,20 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                       in accessorizing to elevate the overall look.
                     </Text>
                   </View>
-                  
-                  {/* Score meters in a two-column grid */}
                   <View style={progressStyles.metricsGridContainer}>
                     <View style={progressStyles.metricsRow}>
                       <ScoreMeter label="Color Harmony" data={mockStyleAnalysis.colorHarmony} />
                       <ScoreMeter label="Fit & Silhouette" data={mockStyleAnalysis.fitAndSilhouette} />
                     </View>
-                    
                     <View style={progressStyles.metricsRow}>
                       <ScoreMeter label="Style Coherence" data={mockStyleAnalysis.styleCoherence} />
                       <ScoreMeter label="Accessorizing" data={mockStyleAnalysis.accessorizing} />
                     </View>
-                    
                     <View style={progressStyles.metricsRow}>
                       <ScoreMeter label="Occasion Match" data={mockStyleAnalysis.occasionMatch} />
                       <ScoreMeter label="Trend Awareness" data={mockStyleAnalysis.trendAwareness} />
                     </View>
                   </View>
-                  
-                  {/* Suggestions section */}
                   <View style={progressStyles.suggestionsContainer}>
                     <Text style={progressStyles.suggestionsTitle}>Suggestions</Text>
                     <View style={progressStyles.suggestionItem}>
@@ -307,8 +295,6 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                       </Text>
                     </View>
                   </View>
-                  
-                  {/* Back button */}
                   <TouchableOpacity 
                     style={progressStyles.backButton}
                     onPress={() => {
@@ -318,8 +304,6 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   >
                     <Text style={progressStyles.backButtonText}>Back to Outfit</Text>
                   </TouchableOpacity>
-                  
-                  {/* Extra padding at bottom for better scrolling */}
                   <View style={{ height: 40 }} />
                 </View>
               </Animated.ScrollView>
@@ -329,4 +313,4 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
       </View>
     </Modal>
   );
-}; 
+};

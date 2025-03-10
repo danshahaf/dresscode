@@ -1,13 +1,25 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Image, StyleSheet, TouchableOpacity, Text, View, Dimensions, Modal, Platform, Alert, ActivityIndicator } from 'react-native';
+import { 
+  Image, 
+  StyleSheet, 
+  TouchableOpacity, 
+  Text, 
+  View, 
+  Dimensions, 
+  Modal, 
+  Platform, 
+  Alert, 
+  ActivityIndicator 
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
-import Constants from 'expo-constants';
+import Constants, { ExecutionEnvironment } from 'expo-constants';
+import * as Camera from 'expo-camera';
 
-import { styles  } from '@/app/styles/scan';
+import { styles } from '@/app/styles/scan';
 
 // Import the upload function
 import { uploadOutfitImage } from '@/lib/storage';
@@ -17,10 +29,10 @@ import { useAuth } from '@/lib/auth';
 const isSimulator = () => {
   return (
     Platform.OS === 'ios' && 
-    Constants.executionEnvironment === 'simulator' as any
+    Constants.executionEnvironment !== ExecutionEnvironment.Bare && 
+    !Constants.isDevice
   ) || (
     Platform.OS === 'android' && 
-    Constants.executionEnvironment === 'storeClient' as any &&
     !Constants.isDevice
   );
 };
@@ -29,247 +41,224 @@ export default function HomeScreen() {
   const router = useRouter();
   const screenHeight = Dimensions.get('window').height;
   
-  // State for selected image and modal visibility
+  // State for selected image, modal, and analysis result
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   
-  // State for camera - using string literals instead of enum
+  // State for camera (if needed)
   const [cameraVisible, setCameraVisible] = useState(false);
-  const [hasCameraPermission, setHasCameraPermission] = useState(null);
+  const [hasCameraPermission, setHasCameraPermission] = useState<boolean | null>(null);
   const cameraRef = useRef(null);
   
-  // Add these state variables
+  // Additional states for uploading/analyzing
   const { user } = useAuth();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [analysisResult, setAnalysisResult] = useState(null);
+  const [analysisResult, setAnalysisResult] = useState<any>(null);
+  
+  // Separate loading states for each button
+  const [isScanLoading, setIsScanLoading] = useState(false);
+  const [isUploadLoading, setIsUploadLoading] = useState(false);
+  
+  // Image dimensions for proper display
+  const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   
   // Handle scan outfit button press
   const handleScanOutfit = async () => {
-    try {
-      setIsLoading(true);
-      
-      // Check if running on simulator
-      if (isSimulator()) {
-        setIsLoading(false);
-        
-        // Show alert about simulator limitations
-        Alert.alert(
-          'Simulator Detected',
-          'Camera is not available on simulators. Would you like to select a photo from the library instead?',
-          [
-            {
-              text: 'Cancel',
-              style: 'cancel'
-            },
-            {
-              text: 'Select Photo',
-              onPress: handleUploadPhoto
-            }
-          ]
-        );
-        return;
-      }
-      
-      // Check if we're running in a browser (web)
-      if (Platform.OS === 'web') {
-        Alert.alert(
-          'Not Supported',
-          'Camera functionality is not available in web browser.',
-          [{ text: 'OK' }]
-        );
-        setIsLoading(false);
-        return;
-      }
-      
-      // Use a simpler approach with ImagePicker
-      let result = await ImagePicker.launchCameraAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 1,
-      });
-      
-      console.log('Camera result:', result);
-      
-      setIsLoading(false);
-      
-      if (!result.canceled && result.assets && result.assets.length > 0) {
-        setSelectedImage(result.assets[0].uri);
-        setModalVisible(true);
-      }
-    } catch (error: any) {
-      console.error('Camera error:', error);
-      setIsLoading(false);
+    // Check if running on a simulator
+    if (isSimulator()) {
       Alert.alert(
-        'Camera Error',
-        'There was a problem accessing the camera: ' + (error.message || 'Unknown error'),
-        [{ text: 'OK' }]
+        'Simulator Detected',
+        'Camera functionality is limited on simulators. Would you like to upload a photo instead?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          },
+          {
+            text: 'Upload Photo',
+            onPress: handleUploadPhoto
+          }
+        ]
       );
+      return;
+    }
+    
+    try {
+      setIsScanLoading(true); // Only set scan loading to true
+      
+      // Request camera permissions using the correct API
+      const { status } = await ImagePicker.requestCameraPermissionsAsync();
+      setHasCameraPermission(status === 'granted');
+      
+      if (status === 'granted') {
+        // Launch camera
+        const result = await ImagePicker.launchCameraAsync({
+          mediaTypes: ImagePicker.MediaTypeOptions.Images,
+          allowsEditing: true,
+          aspect: [4, 3],
+          quality: 0.8,
+        });
+        
+        if (!result.canceled && result.assets && result.assets.length > 0) {
+          const imageUri = result.assets[0].uri;
+          
+          // Get image dimensions for proper display
+          Image.getSize(imageUri, (width, height) => {
+            const aspectRatio = width / height;
+            let newHeight = height;
+            let newWidth = width;
+            
+            if (height > 400) {
+              newHeight = 400;
+              newWidth = 400 * aspectRatio;
+            }
+            
+            setImageSize({ width: newWidth, height: newHeight });
+          });
+          
+          // Process the selected image
+          await processSelectedImage(imageUri);
+        }
+      } else {
+        Alert.alert('Permission Required', 'Camera access is needed to scan outfits.');
+      }
+    } catch (error) {
+      console.error('Error in handleScanOutfit:', error);
+      Alert.alert('Error', 'There was a problem accessing your camera. Please try again.');
+    } finally {
+      setIsScanLoading(false); // Reset scan loading state
     }
   };
   
   // Handle upload photo button press
   const handleUploadPhoto = async () => {
     try {
-      setIsLoading(true);
+      setIsUploadLoading(true); // Only set upload loading to true
       
       // Request media library permissions
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       
       if (status !== 'granted') {
-        Alert.alert(
-          'Permission Required',
-          'Please allow access to your photo library to upload photos.',
-          [{ text: 'OK' }]
-        );
-        setIsLoading(false);
+        Alert.alert('Permission Required', 'Photo library access is needed to upload outfits.');
         return;
       }
       
-      // Open image picker with modified options to prevent forced cropping
+      // Launch image picker
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: false,
-        quality: 1,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
       });
       
-      setIsLoading(false);
-      
-      if (!result.canceled) {
-        // Set the selected image and show modal
-        setSelectedImage(result.assets[0].uri);
-        setModalVisible(true);
+      if (!result.canceled && result.assets && result.assets.length > 0) {
+        const imageUri = result.assets[0].uri;
+        
+        // Get image dimensions for proper display
+        Image.getSize(imageUri, (width, height) => {
+          const aspectRatio = width / height;
+          let newHeight = height;
+          let newWidth = width;
+          
+          if (height > 400) {
+            newHeight = 400;
+            newWidth = 400 * aspectRatio;
+          }
+          
+          setImageSize({ width: newWidth, height: newHeight });
+        });
+        
+        // Immediately process the selected image
+        await processSelectedImage(imageUri);
       }
     } catch (error) {
-      setIsLoading(false);
       console.error('Error in handleUploadPhoto:', error);
-      Alert.alert(
-        'Error',
-        'There was a problem accessing your photos. Please try again.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', 'There was a problem accessing your photos. Please try again.');
+    } finally {
+      setIsUploadLoading(false); // Reset upload loading state
+    }
+  };
+  
+  // Process the selected image: upload and get score
+  const processSelectedImage = async (imageUri: string) => {
+    try {
+      setSelectedImage(imageUri);
+      setIsAnalyzing(true);
+      setModalVisible(true); // Show modal immediately with loading state
+      
+      // Upload the image and retrieve analysis result
+      const result = await uploadOutfitImage(imageUri, user?.id || '', 'Uploaded via app');
+      
+      if (!result.success) {
+        throw new Error(result.error?.message || 'Failed to upload image');
+      }
+      
+      setAnalysisResult(result.data); // result.data should include the score
+    } catch (error) {
+      console.error('Error analyzing outfit:', error);
+      Alert.alert('Error', 'Failed to analyze outfit. Please try again.');
+      setModalVisible(false); // Close modal on error
+    } finally {
+      setIsAnalyzing(false);
     }
   };
   
   // Close the image preview modal
   const handleCloseModal = () => {
     setModalVisible(false);
-  };
-  
-  // Analyze the selected outfit
-  const handleAnalyzeOutfit = async () => {
-    if (!selectedImage) {
-      Alert.alert('No Image', 'Please select an image first');
-      return;
-    }
-    
-    if (!user) {
-      Alert.alert('Not Logged In', 'Please log in to analyze outfits');
-      return;
-    }
-    
-    try {
-      setIsAnalyzing(true);
-      
-      // Upload the image to Supabase
-      const result = await uploadOutfitImage(
-        selectedImage,
-        user.id,
-        'Uploaded via app'
-      );
-      
-      if (!result.success) {
-        throw new Error(result.error?.message || 'Failed to upload image');
-      }
-      
-      // Set the analysis result
-      setAnalysisResult(result.data);
-      
-      // Show success message
-      Alert.alert(
-        'Analysis Complete',
-        `Your outfit scored ${result.data.score} out of 100!`,
-        [
-          {
-            text: 'View Details',
-            onPress: () => {
-              // Navigate to the progress tab to see the outfit
-              router.push('/(tabs)/progress');
-            }
-          },
-          {
-            text: 'OK',
-            onPress: () => {
-              // Close the modal and reset
-              handleCloseModal();
-              setSelectedImage(null);
-              setAnalysisResult(null);
-            }
-          }
-        ]
-      );
-      
-    } catch (error) {
-      console.error('Error analyzing outfit:', error);
-      Alert.alert('Error', 'Failed to analyze outfit. Please try again.');
-    } finally {
-      setIsAnalyzing(false);
-    }
+    setSelectedImage(null);
+    setAnalysisResult(null);
   };
   
   return (
     <View style={styles.container}>
       {/* Background Image */}
       <Image 
-        source={require('@/assets/images/cover-dresscode.png')} 
+        source={require('@/assets/images/cover-dresscode-4.png')} 
         style={styles.backgroundImage}
         resizeMode="cover"
       />
       
       {/* Blur Overlay */}
-      <BlurView 
-        intensity={15} 
-        style={StyleSheet.absoluteFill} 
-        tint="default"
-      />
+      <BlurView intensity={15} style={StyleSheet.absoluteFill} tint="default" />
       
       {/* Gradient Overlay */}
-      <LinearGradient
-        colors={['transparent', 'rgba(0,0,0,0.7)']}
-        style={styles.gradient}
-      />
+      <LinearGradient colors={['transparent', 'rgba(0,0,0,0.7)']} style={styles.gradient} />
       
       {/* Content Container */}
       <View style={styles.contentContainer}>
-        {/* App Logo or Title could go here */}
-        
-        {/* Action Buttons */}
+        {/* Main Action Buttons */}
         <View style={styles.buttonContainer}>
           <TouchableOpacity 
-            style={styles.primaryButton}
+            style={styles.scanButton} 
             onPress={handleScanOutfit}
-            disabled={isLoading}
+            disabled={isScanLoading || isUploadLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#fff" style={styles.buttonIcon} />
+            {isScanLoading ? (
+              <ActivityIndicator color="#fff" size="small" />
             ) : (
-              <IconSymbol size={20} name="camera.fill" color="#fff" style={styles.buttonIcon} />
+              <>
+                <IconSymbol name="camera" size={24} color="#fff" style={styles.buttonIcon} />
+                <Text style={styles.buttonText}>Scan Outfit</Text>
+              </>
             )}
-            <Text style={styles.primaryButtonText}>Scan Outfit</Text>
           </TouchableOpacity>
           
           <TouchableOpacity 
-            style={styles.secondaryButton}
+            style={styles.uploadButton} 
             onPress={handleUploadPhoto}
-            disabled={isLoading}
+            disabled={isScanLoading || isUploadLoading}
           >
-            {isLoading ? (
-              <ActivityIndicator color="#cca702" style={styles.buttonIcon} />
+            {isUploadLoading ? (
+              <ActivityIndicator color="#cca702" size="small" />
             ) : (
-              <IconSymbol size={20} name="photo" color="#cca702" style={styles.buttonIcon} />
+              <>
+                <IconSymbol name="photo" size={24} color="#cca702" style={styles.buttonIcon} />
+                <Text style={styles.uploadButtonText}>Upload Photo</Text>
+              </>
             )}
-            <Text style={styles.secondaryButtonText}>Upload Photo</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -281,57 +270,61 @@ export default function HomeScreen() {
         visible={modalVisible}
         onRequestClose={handleCloseModal}
       >
-        <View style={styles.modalOverlay}>
+        <View style={styles.modalContainer}>
+          <BlurView intensity={10} style={StyleSheet.absoluteFill} tint="light" />
           <View style={styles.modalContent}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Preview Outfit</Text>
-              <TouchableOpacity 
-                style={styles.closeButton}
-                onPress={handleCloseModal}
-                disabled={isAnalyzing}
-              >
-                <IconSymbol size={20} name="xmark" color="#333" />
+              <Text style={styles.modalTitle}>Outfit Analysis</Text>
+              <TouchableOpacity style={styles.closeButton} onPress={handleCloseModal}>
+                <IconSymbol name="xmark" size={20} color="#333" />
               </TouchableOpacity>
             </View>
             
-            {selectedImage && (
-              <View style={styles.imagePreviewContainer}>
+            <View style={[
+              styles.imagePreviewContainer, 
+              { height: imageSize.height > 0 ? imageSize.height : 400 }
+            ]}>
+              {selectedImage ? (
                 <Image 
                   source={{ uri: selectedImage }} 
                   style={styles.imagePreview} 
                   resizeMode="contain"
                 />
-                
-                {isAnalyzing && (
-                  <View style={styles.loadingOverlay}>
-                    <ActivityIndicator size="large" color="#cca702" />
-                    <Text style={styles.loadingText}>Analyzing your outfit...</Text>
-                  </View>
-                )}
-              </View>
-            )}
-            
-            <TouchableOpacity 
-              style={[
-                styles.analyzeButton,
-                isAnalyzing && styles.disabledButton
-              ]}
-              onPress={handleAnalyzeOutfit}
-              disabled={isAnalyzing || !selectedImage}
-            >
-              {isAnalyzing ? (
-                <Text style={styles.analyzeButtonText}>Analyzing...</Text>
-              ) : (
-                <>
-                  <IconSymbol size={20} name="sparkles" color="#fff" style={styles.buttonIcon} />
-                  <Text style={styles.analyzeButtonText}>Vibe Check</Text>
-                </>
+              ) : null}
+              
+              {isAnalyzing && (
+                <View style={styles.loadingOverlay}>
+                  <ActivityIndicator size="large" color="#cca702" />
+                  <Text style={styles.loadingText}>Analyzing your outfit...</Text>
+                </View>
               )}
-            </TouchableOpacity>
+            </View>
+            
+            {analysisResult && !isAnalyzing ? (
+              <View style={styles.analysisResultContainer}>
+                <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
+                  <Text style={styles.scoreTitle}>Style Score</Text>
+                  <View style={styles.scoreCircle}>
+                    <Text style={styles.scoreText}>{analysisResult.score}</Text>
+                  </View>
+                </View>
+                <TouchableOpacity 
+                  style={styles.viewDetailsButton}
+                  onPress={() => {
+                    handleCloseModal();
+                    router.push('/(tabs)/progress');
+                  }}
+                >
+                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
+                    <IconSymbol name="sparkles" size={16} color="#fff" style={{marginRight: 8}} />
+                    <Text style={styles.viewDetailsText}>Vibe Check</Text>
+                  </View>
+                </TouchableOpacity>
+              </View>
+            ) : null}
           </View>
         </View>
       </Modal>
     </View>
   );
 }
-
