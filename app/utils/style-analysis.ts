@@ -1,4 +1,5 @@
 import { StyleAnalysis } from '@/app/data/progress.data';
+import { DailyScore } from '@/app/data/progress.data';
 
 // Calculate overall score from style analysis
 export const calculateOverallScore = (analysis: StyleAnalysis): string => {
@@ -20,30 +21,38 @@ export const getScoreColor = (value: number): string => {
   return '#E53935';                   // Red for low scores - update this color
 };
 
-// Calculate chart points and path
 export const calculateChartPath = (
   dailyScores: DailyScore[],
-  width: number,
-  height: number,
-  leftPadding: number = 0
+  effectiveWidth: number,
+  chartHeight: number,
+  leftPadding: number
 ) => {
-  if (!dailyScores || dailyScores.length === 0) {
-    return { pathD: '', points: [] };
-  }
-
-  const points = dailyScores.map((score, index) => {
-    // Calculate x position with proper padding
-    const x = leftPadding + (index * ((width - leftPadding) / (dailyScores.length - 1)));
-    // Calculate y position (invert the y-axis since SVG 0,0 is top-left)
-    const y = height - (score.score / 100 * height);
-    return { x, y };
+  // There are 7 days, so 6 intervals.
+  const pointSpacing = effectiveWidth / 6;
+  
+  // Map dailyScores to 7 points.
+  // If score is null, set y to baseline (chartHeight).
+  const points = dailyScores.map((ds, index) => {
+    const y = ds.score !== null ? chartHeight - (ds.score / 100) * chartHeight : chartHeight;
+    return { x: leftPadding + index * pointSpacing, y, score: ds.score };
   });
 
-  // Create the path data
-  let pathD = `M ${points[0].x} ${points[0].y}`;
-  for (let i = 1; i < points.length; i++) {
-    pathD += ` L ${points[i].x} ${points[i].y}`;
+  let pathD = '';
+  // Filter out points with valid (non-null) scores
+  const validPoints = points.filter(p => p.score !== null);
+  if (validPoints.length > 1) {
+    pathD = `M ${validPoints[0].x} ${validPoints[0].y} `;
+    // Build a cubic Bézier curve path between consecutive valid points
+    for (let i = 0; i < validPoints.length - 1; i++) {
+      const p0 = validPoints[i];
+      const p1 = validPoints[i + 1];
+      const cp1x = p0.x + (p1.x - p0.x) / 2;
+      const cp1y = p0.y;
+      const cp2x = p0.x + (p1.x - p0.x) / 2;
+      const cp2y = p1.y;
+      pathD += `C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y} `;
+    }
   }
-
+  
   return { pathD, points };
-}; 
+};
