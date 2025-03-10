@@ -53,11 +53,8 @@ export default function ProfileScreen() {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [darkModeEnabled, setDarkModeEnabled] = useState(true);
 
-  // State for modal visibility
+  // State for modal 
   const [modalVisible, setModalVisible] = useState(false);
-  // State for height picker visibility
-  const [heightPickerVisible, setHeightPickerVisible] = useState(false);
-  // State for info modals
   const [helpSupportVisible, setHelpSupportVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
@@ -96,6 +93,10 @@ export default function ProfileScreen() {
           
           if (profileData) {
             setUserProfile(profileData);
+            // if notifications_enabled is not undefined, set notificationsEnabled to true or false
+            if (profileData.notifications_enabled !== undefined) {
+              setNotificationsEnabled(profileData.notifications_enabled);
+            }
           }
         }
       } catch (error) {
@@ -157,7 +158,7 @@ export default function ProfileScreen() {
     profileImage: getUserProfileImage(),
     height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
     location: userProfile?.location || '-',
-    subscription: userProfile?.subscription_type || 'Free Plan',
+    subscription: userProfile?.subscription_plan || 'Missing',
     email: userEmail
   });
   
@@ -174,7 +175,7 @@ export default function ProfileScreen() {
         profileImage: getUserProfileImage(),
         height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
         location: userProfile?.location || '-',
-        subscription: userProfile?.subscription_type || 'Free Plan',
+        subscription: userProfile?.subscription_plan + ' Plan' || 'Missing Plan',
         email: userEmail
       });
       
@@ -231,11 +232,28 @@ export default function ProfileScreen() {
   }, [userData]);
   
   // Handle form input changes
-  const handleChange = (field: keyof FormData, value: any) => {
+  const handleChange = async (field: keyof FormData, value: any) => {
     setFormData({
       ...formData,
       [field]: value
     });
+    // If it's the notifications field, update the DB
+    if (field === 'notifications') {
+      setNotificationsEnabled(value);
+
+      if (user) {
+        // Update the profiles table
+        const { error } = await supabase
+          .from('profiles')
+          .update({ notifications_enabled: value })
+          .eq('user_id', user.id);
+
+        if (error) {
+          console.error('Error updating notifications_enabled:', error);
+          Alert.alert('Error', 'Could not update notifications preference.');
+        }
+      }
+    }
   };
   
   // Format height for display

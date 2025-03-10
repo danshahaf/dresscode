@@ -9,6 +9,8 @@ import {
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { subscriptionStyles } from '@/app/styles/profile.styles';
 import { useStripe } from '@stripe/stripe-react-native';
+import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/lib/auth';
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -23,6 +25,22 @@ export const SubscriptionModal = ({
 }: SubscriptionModalProps) => {
   // Cast useStripe() to any so that presentApplePay is recognized.
   const { presentApplePay } = useStripe() as any;
+  const { user} = useAuth();
+
+  const updateSubscriptionPlan = async (newPlan: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ subscription_plan: newPlan })
+      .eq('user_id', user.id);
+    if (error) {
+      console.error('Error updating subscription plan:', error);
+      Alert.alert('Error', 'Failed to update subscription plan.');
+      return false;
+    }
+
+    return true;
+  };
 
   // Handler for monthly plan
   const handleApplePayMonthly = async () => {
@@ -39,6 +57,13 @@ export const SubscriptionModal = ({
       console.error('Apple Pay error:', error);
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
+    }
+
+    // Update subscription plan to Premium Monthly
+    const updated = await updateSubscriptionPlan('Premium Monthly');
+    if (updated) {
+      Alert.alert('Success', 'Subscription updated to Premium Monthly.');
+      onClose();
     }
     Alert.alert('Success', 'Apple Pay completed for Monthly plan. Proceeding to create subscription...');
   };
@@ -59,8 +84,27 @@ export const SubscriptionModal = ({
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
     }
+
+    // Update subscription plan to Premium Yearly
+    const updated = await updateSubscriptionPlan('Premium Yearly');
+    if (updated) {
+      Alert.alert('Success', 'Subscription updated to Premium Yearly.');
+      onClose();
+    }
+
     Alert.alert('Success', 'Apple Pay completed for Yearly plan. Proceeding to create subscription...');
   };
+
+  //handling canceling subscription
+  const handleCancelSubscription = async () => {
+    console.log('Cancel Subscription button pressed');
+    const updated = await updateSubscriptionPlan('Free');
+    if (updated) {
+      Alert.alert('Subscription Cancelled', 'Your subscription has been cancelled. You are now on Free Plan.');
+      onClose();
+    }
+  };
+  
 
   return (
     <Modal
@@ -128,7 +172,10 @@ export const SubscriptionModal = ({
           </View>
           
           {/* Cancel Subscription Button */}
-          <TouchableOpacity style={subscriptionStyles.cancelSubscriptionButton}>
+          <TouchableOpacity 
+            style={subscriptionStyles.cancelSubscriptionButton}
+            onPress={handleCancelSubscription}
+          >
             <Text style={subscriptionStyles.cancelSubscriptionText}>Cancel Subscription</Text>
           </TouchableOpacity>
         </View>
