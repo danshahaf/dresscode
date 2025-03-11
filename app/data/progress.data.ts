@@ -1,7 +1,7 @@
 // Types and interfaces
 export interface DailyScore {
   date: string;
-  score: number;
+  score: number | null;
 }
 
 export interface Outfit {

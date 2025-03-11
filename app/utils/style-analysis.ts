@@ -42,7 +42,6 @@ export const calculateChartPath = (
   const validPoints = points.filter(p => p.score !== null);
   if (validPoints.length > 1) {
     pathD = `M ${validPoints[0].x} ${validPoints[0].y} `;
-    // Build a cubic Bézier curve path between consecutive valid points
     for (let i = 0; i < validPoints.length - 1; i++) {
       const p0 = validPoints[i];
       const p1 = validPoints[i + 1];
@@ -53,6 +52,7 @@ export const calculateChartPath = (
       pathD += `C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y} `;
     }
   }
+
   
   return { pathD, points };
 };

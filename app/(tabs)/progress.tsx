@@ -58,55 +58,6 @@ interface DailyScore {
   score: number | null; // average score; null if no outfits on that day
 }
 
-const [dailyScores, setDailyScores] = useState<DailyScore[]>([]);
-
-useEffect(() => {
-  async function fetchDailyScores() {
-    try {
-      if (!user) return;
-      const today = new Date();
-      const startDate = new Date();
-      startDate.setDate(today.getDate() - 6); // 7 days including today
-
-      const { data, error } = await supabase
-        .from('outfits')
-        .select('created_at, score')
-        .eq('user_id', user.id)
-        .gte('created_at', startDate.toISOString());
-
-      if (error) {
-        console.error('Error fetching outfits for daily scores:', error);
-        return;
-      }
-
-      // Group scores by day key (YYYY-MM-DD)
-      const scoresByDay: { [key: string]: number[] } = {};
-      (data || []).forEach((outfit: any) => {
-        const dayKey = outfit.created_at.slice(0, 10);
-        if (!scoresByDay[dayKey]) scoresByDay[dayKey] = [];
-        scoresByDay[dayKey].push(outfit.score);
-      });
-
-      const daily: DailyScore[] = [];
-      for (let i = 0; i < 7; i++) {
-        const d = new Date(startDate);
-        d.setDate(startDate.getDate() + i);
-        const key = d.toISOString().slice(0, 10);
-        const scores = scoresByDay[key];
-        const avgScore = scores ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
-        daily.push({
-          date: formatDateForChart(d),
-          score: avgScore,
-        });
-      }
-      setDailyScores(daily);
-    } catch (err) {
-      console.error('Unexpected error fetching daily scores:', err);
-    }
-  }
-  if (user) fetchDailyScores();
-}, [user]);
-
 
 export default function ProgressScreen() {
   const { user } = useAuth();
@@ -114,6 +65,55 @@ export default function ProgressScreen() {
   const [loading, setLoading] = useState(true);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
+
+  const [dailyScores, setDailyScores] = useState<DailyScore[]>([]);
+
+  useEffect(() => {
+    async function fetchDailyScores() {
+      try {
+        if (!user) return;
+        const today = new Date();
+        const startDate = new Date();
+        startDate.setDate(today.getDate() - 6); // 7 days including today
+
+        const { data, error } = await supabase
+          .from('outfits')
+          .select('created_at, score')
+          .eq('user_id', user.id)
+          .gte('created_at', startDate.toISOString());
+
+        if (error) {
+          console.error('Error fetching outfits for daily scores:', error);
+          return;
+        }
+
+        // Group scores by day key (YYYY-MM-DD)
+        const scoresByDay: { [key: string]: number[] } = {};
+        (data || []).forEach((outfit: any) => {
+          const dayKey = outfit.created_at.slice(0, 10);
+          if (!scoresByDay[dayKey]) scoresByDay[dayKey] = [];
+          scoresByDay[dayKey].push(outfit.score);
+        });
+
+        const daily: DailyScore[] = [];
+        for (let i = 0; i < 7; i++) {
+          const d = new Date(startDate);
+          d.setDate(startDate.getDate() + i);
+          const key = d.toISOString().slice(0, 10);
+          const scores = scoresByDay[key];
+          const avgScore = scores ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+          daily.push({
+            date: formatDateForChart(d),
+            score: avgScore,
+          });
+        }
+        setDailyScores(daily);
+      } catch (err) {
+        console.error('Unexpected error fetching daily scores:', err);
+      }
+    }
+    if (user) fetchDailyScores();
+  }, [user]);
   
   // Fetch outfits from Supabase
   useEffect(() => {
@@ -174,7 +174,7 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={progressStyles.container}>
       {/* Progress Chart */}
-      <ProgressChart dailyScores={[]} /> {/* Update if you have real chart data */}
+      <ProgressChart dailyScores={dailyScores} /> {/* Update if you have real chart data */}
       
       {/* Recent Outfits Section */}
       <View>
