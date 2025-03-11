@@ -462,4 +462,8 @@ export const subscriptionStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '500',
   },
+  disabledButton: {
+    opacity: 0.5,  // Adjust as needed
+  },
+  
 }); 

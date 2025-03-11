@@ -11,44 +11,50 @@ const openai = new OpenAI({apiKey: `${process.env.EXPO_PUBLIC_OPENAI_API_KEY}`})
 // In a real app, you would use OpenAI's API directly with fetch
 async function getOutfitScore(imageUrl: string): Promise<number> {
   try {
-    // For now, return a random score between 60 and 95
-    // In a real implementation, you would call OpenAI's API here
     console.log('Getting score for image:', imageUrl);
     
-    // // Mock implementation - replace with actual API call in production
-    // const randomScore = Math.floor(Math.random() * 36) + 60; // Random score between 60-95
-    // console.log('Generated mock score:', randomScore);
-    
-    // return randomScore;
-    
-    
-    // Example of how you would call OpenAI API directly with fetch:
     const response = await openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "user",
+          content: [
             {
-                role: "user",
-                content: [
-                    { type: "text", text: "Rate this outfit on a scale from 0 to 100 based on style, fit, color coordination, and overall aesthetic. Only respond with a number between 0 and 100." },
-                    { type: "image_url", image_url: { url: imageUrl } }
-                ],
+              type: "text",
+              text: `Analyze the provided image.
+                    If the image contains a clear outfit or at least you see a person wearing a certain outfit, evaluate it based on the following criteria:
+                    - Color harmony
+                    - Fit & Silhouette
+                    - Style coherence
+                    - Accessorizing
+                    - Trendiness
+                    - Occasion match
+
+                    Provide one overall style score between 0 and 100 that reflects the outfit's quality and aesthetic.
+                    If the image does not contain a recognizable outfit, respond only with "No outfit detected".`
             },
-        ],
-        store: true,
+            { type: "image_url", image_url: { url: imageUrl } }
+          ],
+        },
+      ],
+      store: true,
     });
     
     console.log(response);
-    const scoreText = response.choices[0]?.message?.content?.trim() || "-1";
+    const scoreText = response.choices[0]?.message?.content?.trim() || "";
+    console.log(scoreText)
+    if (scoreText.toLowerCase().includes("no outfit detected")) {
+      return -1; // Sentinel value indicating no outfit was found.
+    }
     const scoreMatch = scoreText.match(/\d+/);
     return scoreMatch ? parseInt(scoreMatch[0], 10) : 70;
     
-    
   } catch (error) {
     console.error('Error getting outfit score:', error);
-    // Return a default score if there's an error
-    return 70;
+    return -2;
   }
 }
+
 
 // Function to upload an image to Supabase storage
 export async function uploadOutfitImage(

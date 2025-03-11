@@ -18,7 +18,8 @@ import { BlurView } from 'expo-blur';
 import * as ImagePicker from 'expo-image-picker';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import * as Camera from 'expo-camera';
-
+import { supabase } from '@/lib/supabase';
+import { SubscriptionModal } from '../components/profile/SubscriptionModal';
 import { styles } from '@/app/styles/scan';
 
 // Import the upload function
@@ -64,6 +65,28 @@ export default function HomeScreen() {
   // Image dimensions for proper display
   const [imageSize, setImageSize] = useState({ width: 0, height: 0 });
   
+  // Subscription Information
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
+  const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function fetchSubscriptionPlan() {
+      if (!user) return;
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('subscription_plan')
+        .eq('user_id', user.id)
+        .single();
+      if (error) {
+        console.error('Error fetching subscription plan:', error);
+        return;
+      }
+      console.log('Fetched subscription plan:', data.subscription_plan);
+      setSubscriptionPlan(data.subscription_plan);
+    }
+    fetchSubscriptionPlan();
+  }, [user]);
+
   // Handle scan outfit button press
   const handleScanOutfit = async () => {
     // Check if running on a simulator
@@ -187,7 +210,7 @@ export default function HomeScreen() {
       setSelectedImage(imageUri);
       setIsAnalyzing(true);
       setModalVisible(true); // Show modal immediately with loading state
-      
+  
       // Upload the image and retrieve analysis result
       const result = await uploadOutfitImage(imageUri, user?.id || '', 'Uploaded via app');
       
@@ -195,7 +218,20 @@ export default function HomeScreen() {
         throw new Error(result.error?.message || 'Failed to upload image');
       }
       
-      setAnalysisResult(result.data); // result.data should include the score
+      // Check if the AI indicates no outfit was detected (score === -1)
+      const { score } = result.data;
+      if (score === -1) {
+        Alert.alert(
+          "No Outfit Detected",
+          "The image does not appear to contain a clear outfit. Please try scanning or uploading a different image."
+        );
+        setModalVisible(false);
+        router.push('/'); // Adjust the route if needed
+        return;
+      }
+      
+      // Otherwise, set the analysis result
+      setAnalysisResult(result.data);
     } catch (error) {
       console.error('Error analyzing outfit:', error);
       Alert.alert('Error', 'Failed to analyze outfit. Please try again.');
@@ -264,6 +300,7 @@ export default function HomeScreen() {
       </View>
       
       {/* Image Preview Modal */}
+      {/* Image Preview Modal */}
       <Modal
         animationType="slide"
         transparent={true}
@@ -284,13 +321,13 @@ export default function HomeScreen() {
               styles.imagePreviewContainer, 
               { height: imageSize.height > 0 ? imageSize.height : 400 }
             ]}>
-              {selectedImage ? (
+              {selectedImage && (
                 <Image 
                   source={{ uri: selectedImage }} 
                   style={styles.imagePreview} 
                   resizeMode="contain"
                 />
-              ) : null}
+              )}
               
               {isAnalyzing && (
                 <View style={styles.loadingOverlay}>
@@ -300,7 +337,7 @@ export default function HomeScreen() {
               )}
             </View>
             
-            {analysisResult && !isAnalyzing ? (
+            {analysisResult && !isAnalyzing && (
               <View style={styles.analysisResultContainer}>
                 <View style={{flexDirection: 'row', alignItems: 'center', gap: 10}}>
                   <Text style={styles.scoreTitle}>Style Score</Text>
@@ -311,20 +348,44 @@ export default function HomeScreen() {
                 <TouchableOpacity 
                   style={styles.viewDetailsButton}
                   onPress={() => {
+                    console.log('Vibe Check pressed, subscriptionPlan:', subscriptionPlan);
+                    // First, close the outfit analysis modal.
                     handleCloseModal();
-                    router.push('/(tabs)/progress');
+                    // Then, if the plan is Free, show the subscription modal.
+                    if (subscriptionPlan === 'Free') {
+                      setTimeout(() => {
+                        setSubscriptionModalVisible(true);
+                      }, 300);
+                    } else {
+                      // Otherwise, navigate directly to progress.tsx.
+                      router.push('/(tabs)/progress');
+                    }
                   }}
                 >
-                  <View style={{flexDirection: 'row', alignItems: 'center'}}>
-                    <IconSymbol name="sparkles" size={16} color="#fff" style={{marginRight: 8}} />
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <IconSymbol name="sparkles" size={16} color="#fff" style={{ marginRight: 8 }} />
                     <Text style={styles.viewDetailsText}>Vibe Check</Text>
                   </View>
                 </TouchableOpacity>
               </View>
-            ) : null}
+            )}
           </View>
         </View>
       </Modal>
+      
+      {/* Subscription Modal */}
+      {subscriptionModalVisible && subscriptionPlan && (
+        <SubscriptionModal 
+          visible={subscriptionModalVisible}
+          onClose={() => setSubscriptionModalVisible(false)}
+          currentPlan={subscriptionPlan + ' Plan'}
+          onSubscriptionSuccess={() => {
+            // When subscription is successful, navigate to progress.tsx.
+            setSubscriptionModalVisible(false);
+            router.push('/(tabs)/progress');
+          }}
+        />
+      )}
     </View>
   );
 }

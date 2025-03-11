@@ -16,12 +16,14 @@ interface SubscriptionModalProps {
   visible: boolean;
   onClose: () => void;
   currentPlan: string;
+  onSubscriptionSuccess?: () => void;
 }
 
 export const SubscriptionModal = ({ 
   visible, 
   onClose, 
-  currentPlan 
+  currentPlan,
+  onSubscriptionSuccess,
 }: SubscriptionModalProps) => {
   // Cast useStripe() to any so that presentApplePay is recognized.
   const { presentApplePay } = useStripe() as any;
@@ -52,23 +54,23 @@ export const SubscriptionModal = ({
       country: 'US',
       currency: 'USD',
     });
-
+  
     if (error) {
       console.error('Apple Pay error:', error);
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
     }
-
+  
     // Update subscription plan to Premium Monthly
     const updated = await updateSubscriptionPlan('Premium Monthly');
     if (updated) {
       Alert.alert('Success', 'Subscription updated to Premium Monthly.');
       onClose();
+      if (onSubscriptionSuccess) onSubscriptionSuccess();
     }
     Alert.alert('Success', 'Apple Pay completed for Monthly plan. Proceeding to create subscription...');
   };
-
-  // Handler for yearly plan
+  
   const handleApplePayYearly = async () => {
     console.log('Yearly Apple Pay button pressed');
     const { error } = await presentApplePay({
@@ -78,20 +80,20 @@ export const SubscriptionModal = ({
       country: 'US',
       currency: 'USD',
     });
-
+  
     if (error) {
       console.error('Apple Pay error:', error);
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
     }
-
+  
     // Update subscription plan to Premium Yearly
     const updated = await updateSubscriptionPlan('Premium Yearly');
     if (updated) {
       Alert.alert('Success', 'Subscription updated to Premium Yearly.');
       onClose();
+      if (onSubscriptionSuccess) onSubscriptionSuccess();
     }
-
     Alert.alert('Success', 'Apple Pay completed for Yearly plan. Proceeding to create subscription...');
   };
 
@@ -104,6 +106,7 @@ export const SubscriptionModal = ({
       onClose();
     }
   };
+  
   
 
   return (
@@ -136,9 +139,11 @@ export const SubscriptionModal = ({
             <TouchableOpacity 
               style={[
                 subscriptionStyles.planOption, 
-                currentPlan === 'Premium Plan' && subscriptionStyles.selectedPlan
+                currentPlan === 'Premium Monthly Plan' && subscriptionStyles.selectedPlan,
+                currentPlan === 'Premium Monthly Plan' && subscriptionStyles.disabledButton 
               ]}
               onPress={handleApplePayMonthly}
+              disabled={currentPlan === 'Premium Monthly Plan'}
             >
               <View style={subscriptionStyles.planOptionHeader}>
                 <Text style={subscriptionStyles.planName}>Premium Monthly</Text>
@@ -152,8 +157,10 @@ export const SubscriptionModal = ({
             <TouchableOpacity 
               style={[
                 subscriptionStyles.planOption, 
-                currentPlan === 'Premium Yearly' && subscriptionStyles.selectedPlan
+                currentPlan === 'Premium Yearly Plan' && subscriptionStyles.selectedPlan,
+                currentPlan === 'Premium Yearly Plan' && subscriptionStyles.disabledButton
               ]}
+              disabled={currentPlan === 'Premium Yearly Plan'}
               onPress={handleApplePayYearly}
             >
               <View style={subscriptionStyles.planOptionHeader}>
@@ -163,7 +170,7 @@ export const SubscriptionModal = ({
               <Text style={[subscriptionStyles.planDescription, { color: 'green', fontWeight: 'bold' }]}>
                 Save 17% with annual billing
               </Text>
-              {currentPlan === 'Premium Yearly' && (
+              {currentPlan === 'Premium Yearly Plan' && (
                 <View style={subscriptionStyles.currentPlanBadge}>
                   <Text style={subscriptionStyles.currentPlanBadgeText}>Current Plan</Text>
                 </View>
@@ -173,10 +180,16 @@ export const SubscriptionModal = ({
           
           {/* Cancel Subscription Button */}
           <TouchableOpacity 
-            style={subscriptionStyles.cancelSubscriptionButton}
+            style={[
+              subscriptionStyles.cancelSubscriptionButton,
+              currentPlan === 'Free Plan' && subscriptionStyles.disabledButton
+            ]}          
             onPress={handleCancelSubscription}
+            disabled={currentPlan === 'Free Plan'}
           >
-            <Text style={subscriptionStyles.cancelSubscriptionText}>Cancel Subscription</Text>
+            
+            <Text style={subscriptionStyles.cancelSubscriptionText}>
+              Cancel Subscription</Text>
           </TouchableOpacity>
         </View>
       </View>
