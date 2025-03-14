@@ -42,9 +42,15 @@ interface FormData {
 // Import the local default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/dummy-profile-image.png');
 
+
+
 export default function ProfileScreen() {
-  const router = useRouter();
+
   const { user, signOut } = useAuth();
+
+  
+  const router = useRouter();
+  
   const [loading, setLoading] = useState(true);
   const [userEmail, setUserEmail] = useState<string>('');
   const [userProfile, setUserProfile] = useState<any>(null);

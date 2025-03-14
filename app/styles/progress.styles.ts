@@ -79,7 +79,7 @@ export const progressStyles = StyleSheet.create({
   outfitGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'flex-start',
   },
   outfitTicket: {
     marginBottom: 15,
@@ -159,6 +159,7 @@ export const progressStyles = StyleSheet.create({
     width: '100%',
     height: '65%',
     position: 'relative',
+    backgroundColor: '#eee',
   },
   modalImageFull: {
     width: '100%',

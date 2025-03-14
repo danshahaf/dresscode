@@ -9,8 +9,9 @@ import { useAuth } from '@/lib/auth';
 import { progressStyles } from '@/app/styles/progress.styles';
 import { Outfit } from '@/app/data/progress.data';
 
+import { useLocalSearchParams, useRouter } from 'expo-router';
 
-const { user } = useAuth();
+
 
 function formatDate(dateString: string): string {
   const dateObj = new Date(dateString);
@@ -61,12 +62,28 @@ interface DailyScore {
 
 export default function ProgressScreen() {
   const { user } = useAuth();
+  const router = useRouter();
+  const searchParams = useLocalSearchParams();
+    
   const [outfits, setOutfits] = useState<Outfit[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedOutfit, setSelectedOutfit] = useState<Outfit | null>(null);
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   const [dailyScores, setDailyScores] = useState<DailyScore[]>([]);
+
+  useEffect(() => {
+    const newOutfitId = searchParams.newOutfitId;
+    if (newOutfitId && outfits.length > 0) {
+      const outfitToShow = outfits.find((o) => o.id.toString() === newOutfitId);
+      if (outfitToShow) {
+        setSelectedOutfit(outfitToShow);
+        setDetailModalVisible(true);
+        router.replace('/(tabs)/progress');
+      }
+    }
+  }, [searchParams.newOutfitId, outfits]);
+  
 
   useEffect(() => {
     async function fetchDailyScores() {
@@ -123,7 +140,8 @@ export default function ProgressScreen() {
         const { data, error } = await supabase
           .from('outfits')
           .select('*')
-          .eq('user_id', user?.id);
+          .eq('user_id', user?.id)
+          .order('created_at', {ascending: false});
   
         if (error) {
           console.error('Error fetching outfits:', error);
@@ -158,8 +176,11 @@ export default function ProgressScreen() {
 
   // Render each outfit ticket
   const renderOutfitTicket = ({ item }: { item: Outfit }) => (
-    <OutfitTicket outfit={item} onPress={handleOutfitPress} />
+    <View style={styles.outfitItem}>
+      <OutfitTicket outfit={item} onPress={handleOutfitPress} />
+    </View>
   );
+
 
   if (loading) {
     return (
@@ -174,7 +195,7 @@ export default function ProgressScreen() {
   return (
     <SafeAreaView style={progressStyles.container}>
       {/* Progress Chart */}
-      <ProgressChart dailyScores={dailyScores} /> {/* Update if you have real chart data */}
+      <ProgressChart dailyScores={dailyScores} /> 
       
       {/* Recent Outfits Section */}
       <View>
@@ -203,3 +224,12 @@ export default function ProgressScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  outfitItem: {
+    width: '28%',
+    marginVertical: '1%',
+    marginHorizontal: '2.5%',
+  },
+});
+

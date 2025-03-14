@@ -1,5 +1,6 @@
 import React, { createContext, useState, useEffect, useContext, ReactNode } from 'react';
 import { supabase } from './supabase';
+import { Text } from 'react-native';
 import { Session, User } from '@supabase/supabase-js';
 import { useRouter, useSegments } from 'expo-router';
 
@@ -98,6 +99,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
   return (
     <AuthContext.Provider value={{ session, user, loading, signOut }}>
       {children}
+      {/* <Text>AuthProvider Test</Text> */}
     </AuthContext.Provider>
   );
 }

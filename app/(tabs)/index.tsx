@@ -38,7 +38,10 @@ const isSimulator = () => {
   );
 };
 
+
 export default function HomeScreen() {
+  const { user } = useAuth();
+
   const router = useRouter();
   const screenHeight = Dimensions.get('window').height;
   
@@ -53,7 +56,6 @@ export default function HomeScreen() {
   const cameraRef = useRef(null);
   
   // Additional states for uploading/analyzing
-  const { user } = useAuth();
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [analysisResult, setAnalysisResult] = useState<any>(null);
@@ -357,10 +359,16 @@ export default function HomeScreen() {
                         setSubscriptionModalVisible(true);
                       }, 300);
                     } else {
-                      // Otherwise, navigate directly to progress.tsx.
-                      router.push('/(tabs)/progress');
-                    }
-                  }}
+                        // Premium users: redirect with the new outfit's id.
+                        // Ensure that your analysisResult has an 'id' property.
+                        if (analysisResult && analysisResult.id) {
+                          router.push(`/(tabs)/progress?newOutfitId=${analysisResult.id}`);
+                        } else {
+                          // Fallback: just push without param.
+                          router.push('/(tabs)/progress');
+                        }
+                      }
+                    }}
                 >
                   <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                     <IconSymbol name="sparkles" size={16} color="#fff" style={{ marginRight: 8 }} />

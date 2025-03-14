@@ -19,15 +19,20 @@ interface SubscriptionModalProps {
   onSubscriptionSuccess?: () => void;
 }
 
+
+
 export const SubscriptionModal = ({ 
   visible, 
   onClose, 
   currentPlan,
   onSubscriptionSuccess,
 }: SubscriptionModalProps) => {
+
+  const { user } = useAuth();
+
   // Cast useStripe() to any so that presentApplePay is recognized.
   const { presentApplePay } = useStripe() as any;
-  const { user} = useAuth();
+  
 
   const updateSubscriptionPlan = async (newPlan: string): Promise<boolean> => {
     if (!user) return false;

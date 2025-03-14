@@ -1,9 +1,9 @@
 import React from 'react';
-import { View, Text, StyleSheet } from 'react-native';
-import { StyleCritique } from '@/app/data/progress.data';
+import { View, Text } from 'react-native';
+import Svg, { Circle } from 'react-native-svg';
 import { progressStyles } from '@/app/styles/progress.styles';
 import { getScoreColor } from '@/app/utils/style-analysis';
-import Svg, { Circle } from 'react-native-svg';
+import { StyleCritique } from '@/app/data/progress.data';
 
 interface ScoreMeterProps {
   label: string;
@@ -11,13 +11,21 @@ interface ScoreMeterProps {
 }
 
 export const ScoreMeter = ({ label, data }: ScoreMeterProps) => {
-  // Calculate the circle parameters
-  const size = 40; // Even smaller circle
-  const strokeWidth = 3; // Slightly thinner stroke
+  const size = 50; // Slightly larger for better visibility
+  const strokeWidth = 5; // More prominent stroke width
   const radius = (size - strokeWidth) / 2;
   const circumference = 2 * Math.PI * radius;
-  const progress = (data.score / 10) * circumference;
+
+  // Ensure score is between 0-100
+  const score = Math.round(data.score);
+  const progress = (score / 100) * circumference;
   const strokeDashoffset = circumference - progress;
+
+  const getBorderColor = (score: number) => {
+    if (score >= 85) return '#297534'; // green
+    if (score >= 70) return '#cca702'; // gold yellow
+    return '#b81d23'; // red
+  };
   
   return (
     <View style={progressStyles.circularMeterContainer}>
@@ -33,13 +41,13 @@ export const ScoreMeter = ({ label, data }: ScoreMeterProps) => {
               strokeWidth={strokeWidth}
               fill="transparent"
             />
-            
+
             {/* Progress circle */}
             <Circle
               cx={size / 2}
               cy={size / 2}
               r={radius}
-              stroke={getScoreColor(data.score)}
+              stroke={getBorderColor(score)}
               strokeWidth={strokeWidth}
               fill="transparent"
               strokeDasharray={`${circumference} ${circumference}`}
@@ -48,15 +56,15 @@ export const ScoreMeter = ({ label, data }: ScoreMeterProps) => {
               transform={`rotate(-90, ${size / 2}, ${size / 2})`}
             />
           </Svg>
-          
+
           {/* Score text in the center */}
           <View style={progressStyles.circularScoreTextContainer}>
-            <Text style={[progressStyles.circularScoreText, { color: getScoreColor(data.score) }]}>
-              {data.score.toFixed(1)}
+            <Text style={[progressStyles.circularScoreText, { color: getBorderColor(score) }]}>
+              {score}
             </Text>
           </View>
         </View>
-        
+
         {/* Label next to the circle */}
         <View style={progressStyles.meterLabelContainer}>
           <Text style={progressStyles.circularMeterLabel} numberOfLines={2}>
@@ -64,9 +72,9 @@ export const ScoreMeter = ({ label, data }: ScoreMeterProps) => {
           </Text>
         </View>
       </View>
-      
+
       {/* Critique text below */}
       <Text style={progressStyles.critiqueFeedback}>{data.critique}</Text>
     </View>
   );
-}; 
+};
