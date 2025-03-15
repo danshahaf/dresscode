@@ -53,47 +53,54 @@ export const ProgressChart = ({ dailyScores }: ProgressChartProps) => {
         {/* Draw data points, score labels, and date labels */}
         {points.map((point, index) => (
           <G key={index}>
+            {/* Always draw the circle and score dot to have a continuous line */}
             {dailyScores[index].score !== null && (
+              <Circle 
+                cx={point.x}
+                cy={point.y}
+                r="4"
+                fill="#fff"
+                stroke="#cca702"
+                strokeWidth="2"
+              />
+            )}
+            {/* Only display score and date labels if index is not 0 */}
+            {index !== 0 && (
               <>
-                <Circle 
-                  cx={point.x}
-                  cy={point.y}
-                  r="4"
-                  fill="#fff"
-                  stroke="#cca702"
-                  strokeWidth="2"
-                />
+                {dailyScores[index].score !== null && (
+                  <SvgText 
+                    x={point.x}
+                    y={point.y - 10}
+                    fontSize="9"
+                    fill="#666"
+                    textAnchor="middle"
+                    fontWeight="bold"
+                  >
+                    {Math.round(dailyScores[index].score)}
+                  </SvgText>
+                )}
                 <SvgText 
                   x={point.x}
-                  y={point.y - 10}
-                  fontSize="9"
-                  fill="#666"
+                  y={chartDimensions.height + 20}
+                  fontSize="10"
+                  fill="#999"
                   textAnchor="middle"
-                  fontWeight="bold"
                 >
-                  {Math.round(dailyScores[index].score)}
+                  {formatDate(dailyScores[index].date)}
                 </SvgText>
+                <Line 
+                  x1={point.x}
+                  y1={chartDimensions.height}
+                  x2={point.x}
+                  y2={chartDimensions.height + 5}
+                  stroke="#eee"
+                  strokeWidth="1"
+                />
               </>
             )}
-            <SvgText 
-              x={point.x}
-              y={chartDimensions.height + 20}
-              fontSize="10"
-              fill="#999"
-              textAnchor="middle"
-            >
-              {formatDate(dailyScores[index].date)}
-            </SvgText>
-            <Line 
-              x1={point.x}
-              y1={chartDimensions.height}
-              x2={point.x}
-              y2={chartDimensions.height + 5}
-              stroke="#eee"
-              strokeWidth="1"
-            />
           </G>
         ))}
+
       </Svg>
     </View>
   );

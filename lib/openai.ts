@@ -10,6 +10,7 @@ export interface StyleAnalysis {
   accessorizing: { score: number; critique: string };
   occasionMatch: { score: number; critique: string };
   trendAwareness: { score: number; critique: string };
+  suggestions: string;
 }
 
 export async function generateStyleAnalysis(outfitImageUrl: string): Promise<StyleAnalysis> {
@@ -32,6 +33,7 @@ If the image shows a human being wearing any clothing, rate the outfit based on 
 - Occasion match
 
 Compute one overall style score between 0 and 100 that reflects the outfit’s quality and aesthetic.
+Ensure the score is NOT ALWAYS (but sometimes) in increments of 5 and refelects as an integer EXACTLY the appropriate ranking.
 
 IMPORTANT: Output only a valid JSON object exactly in this format (with no extra text):
 {
@@ -41,7 +43,8 @@ IMPORTANT: Output only a valid JSON object exactly in this format (with no extra
   "styleCoherence": {"score": <number>, "critique": "<string>"},
   "accessorizing": {"score": <number>, "critique": "<string>"},
   "occasionMatch": {"score": <number>, "critique": "<string>"},
-  "trendAwareness": {"score": <number>, "critique": "<string>"}
+  "trendAwareness": {"score": <number>, "critique": "<string>"},
+  "suggestions": "<3-sentence summary of suggestions on how to improve the outfit based on the defined criteria as a string>"
 }
 
 If the image does not clearly depict a person wearing clothing or if the person appears nude, output only:
@@ -84,6 +87,8 @@ If the image does not clearly depict a person wearing clothing or if the person 
       accessorizing: { score: parsed.accessorizing.score, critique: parsed.accessorizing.critique },
       occasionMatch: { score: parsed.occasionMatch.score, critique: parsed.occasionMatch.critique },
       trendAwareness: { score: parsed.trendAwareness.score, critique: parsed.trendAwareness.critique },
+      suggestions: parsed.suggestions || "No suggestions provided.",
+
     };
   } catch (error) {
     console.error('Error generating style analysis:', error);

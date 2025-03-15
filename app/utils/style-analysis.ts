@@ -28,7 +28,9 @@ export const calculateChartPath = (
   leftPadding: number
 ) => {
   // There are 7 days, so 6 intervals.
-  const pointSpacing = effectiveWidth / 6;
+  const numPoints = dailyScores.length; // should now be 8
+  const pointSpacing = effectiveWidth / (numPoints - 1);
+
   
   // Map dailyScores to 7 points.
   // If score is null, set y to baseline (chartHeight).

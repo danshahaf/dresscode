@@ -17,8 +17,8 @@ import { progressStyles } from '@/app/styles/progress.styles';
 import { ScoreMeter } from './ScoreMeter';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
-// Import our helper function:
 import { generateStyleAnalysis, StyleAnalysis } from '@/lib/openai';
+import { SubscriptionModal } from '@/app/components/profile/SubscriptionModal';
 
 interface OutfitDetailModalProps {
   visible: boolean;
@@ -31,6 +31,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
   const [styleAnalysis, setStyleAnalysis] = useState<StyleAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [subscriptionPlan, setSubscriptionPlan] = useState<string | null>(null);
+  const [subscriptionModalVisible, setSubscriptionModalVisible] = useState(false);
 
   // State to control whether the AI analysis view is active.
   const [aiAnalysisVisible, setAiAnalysisVisible] = useState(false);
@@ -116,6 +117,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
           accessorizing: { score: data.accessorizing, critique: "" },
           occasionMatch: { score: data.occasion_match, critique: "" },
           trendAwareness: { score: data.trend_awareness, critique: "" },
+          suggestions: data.suggestions,
         };
   
         setStyleAnalysis(analysis);
@@ -137,7 +139,8 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                 accessorizing: newAnalysis.accessorizing.score,
                 occasion_match: newAnalysis.occasionMatch,
                 trend_awareness: newAnalysis.trendAwareness,
-                style_analysis: newAnalysis.textAnalysis, // ✅ Ensure storing only textAnalysis
+                style_analysis: newAnalysis.textAnalysis,
+                suggestions: newAnalysis.suggestions,
               });
   
           } catch (error) {
@@ -294,7 +297,8 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   style={progressStyles.aiCritiqueButton}
                   onPress={() => {
                     if (subscriptionPlan === 'Free') {
-                      // Trigger subscription modal (e.g., via a prop callback or global context)
+                      // Trigger subscription modal 
+                      setSubscriptionModalVisible(true);
                     } else {
                       // For Premium users, trigger analysis manually
                       handleAiCritique();
@@ -311,7 +315,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                     {analysisLoading
                       ? "Analyzing your outfit..."
                       : subscriptionPlan === 'Free'
-                      ? "Analyze Outfit (Subscribe)"
+                      ? "Analyze Outfit"
                       : "Generate Analysis"}
                   </Text>
                 </TouchableOpacity>
@@ -397,6 +401,16 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                       <ScoreMeter label="Trend Awareness" data={styleAnalysis!.trendAwareness} />
                     </View>
                   </View>
+                  {/* Suggestions Section */}
+                  <View>
+                    
+                  </View>
+                  <View style={progressStyles.suggestionsContainer}>
+                    <Text style={progressStyles.suggestionsTitle}>AI Suggestions</Text>
+                    <Text style={progressStyles.suggestionsText}>
+                      {styleAnalysis?.suggestions}
+                    </Text>
+                  </View>
                   <TouchableOpacity 
                     style={progressStyles.backButton}
                     onPress={() => {
@@ -414,6 +428,20 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
           
         </Animated.View>
       </View>
+      {subscriptionModalVisible && (
+        <SubscriptionModal 
+          visible={subscriptionModalVisible}
+          onClose={() => setSubscriptionModalVisible(false)}
+          currentPlan={subscriptionPlan + ' Plan' || 'Free Plan'}
+          onSubscriptionSuccess={() => {
+            // Optionally update the subscription plan state or trigger any post-subscription logic.
+            setSubscriptionModalVisible(false);
+            // For example, you might want to re-fetch the subscription plan here.
+          }}
+        />
+      )}
+
     </Modal>
+    
   );
 };

@@ -437,17 +437,22 @@ export const progressStyles = StyleSheet.create({
     paddingLeft: 12,
   },
   suggestionsContainer: {
-    marginTop: 25,
-    marginBottom: 15,
+    marginTop: 1,
+    marginBottom: 5,
     backgroundColor: '#f9f9f9',
     borderRadius: 12,
     padding: 15,
   },
   suggestionsTitle: {
-    fontSize: 18,
+    fontSize: 14,
     fontWeight: '600',
-    color: '#333',
     marginBottom: 12,
+    color: '#cca702'
+  },
+  suggestionsText: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 20,
   },
   suggestionItem: {
     flexDirection: 'row',

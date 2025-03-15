@@ -91,7 +91,7 @@ export default function ProgressScreen() {
         if (!user) return;
         const today = new Date();
         const startDate = new Date();
-        startDate.setDate(today.getDate() - 6); // 7 days including today
+        startDate.setDate(today.getDate() - 7); // 7 days including today
 
         const { data, error } = await supabase
           .from('outfits')
@@ -113,7 +113,7 @@ export default function ProgressScreen() {
         });
 
         const daily: DailyScore[] = [];
-        for (let i = 0; i < 7; i++) {
+        for (let i = 0; i < 8; i++) {
           const d = new Date(startDate);
           d.setDate(startDate.getDate() + i);
           const key = d.toISOString().slice(0, 10);
