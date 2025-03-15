@@ -10,15 +10,18 @@ module.exports = {
     newArchEnabled: true,
     ios: {
       supportsTablet: true,
-      bundleIdentifier: 'com.seagulltechnologies.dresscodeapp',
+      bundleIdentifier: 'com.seagulltechnologies.dresscode',
+      infoPlist: {
+        ITSAppUsesNonExemptEncryption: false,
+      },
       "entitlements": {
-        "com.apple.developer.in-app-payments": [
-          "merchant.com.dresscode"
-        ]
+        "com.apple.developer.in-app-payments": ["merchant.com.dresscode"],
+        'aps-environment': 'production',
+        'com.apple.developer.applesignin': ['Default'],
       }
     },
     android: {
-      package: 'com.seagulltechnologies.dresscodeapp',
+      package: 'com.seagulltechnologies.dresscode',
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
         backgroundColor: '#ffffff'
