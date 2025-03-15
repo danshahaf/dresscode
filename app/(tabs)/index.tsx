@@ -76,7 +76,7 @@ export default function HomeScreen() {
       if (!user) return;
       const { data, error } = await supabase
         .from('profiles')
-        .select('subscription_plan')
+        .select('subscription_plan, subscription_status, subscription_expires_at')
         .eq('user_id', user.id)
         .single();
       if (error) {

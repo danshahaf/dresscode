@@ -12,6 +12,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
 import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
+import { useAuth } from '@/lib/auth';
 import { supabase, signInWithGoogle, signInWithApple } from '@/lib/supabase';
 import * as WebBrowser from 'expo-web-browser';
 import { makeRedirectUri } from 'expo-auth-session';
@@ -21,6 +22,7 @@ import { styles } from '@/app/styles/login.styles';
 import { InfoModal } from '@/app/components/profile/InfoModal';
 import { TermsOfServiceContent } from '@/app/components/profile/TermsOfServiceContent';
 import { PrivacyPolicyContent } from '@/app/components/profile/PrivacyPolicyContent';
+import { hasPremiumAccess } from '@/lib/premiumAccess';
 
 const { width, height } = Dimensions.get('window');
 
@@ -37,6 +39,7 @@ WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
+  const { user, setUser } = useAuth();
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
   const [initialCheckDone, setInitialCheckDone] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
@@ -144,8 +147,25 @@ export default function LoginScreen() {
           }
           return;
         }
+
+         // Merge the profile data into the user object:
+         const updatedUser = {
+          ...userData.user,
+          subscription_plan: profileData.subscription_plan,
+          subscription_status: profileData.subscription_status,
+          subscription_expires_at: profileData.subscription_expires_at,
+        };
+
+        // Update the global auth state with the updated user object.
+        setUser(updatedUser);
+
+        // Optionally log the premium access status:
+        const isPremium = hasPremiumAccess(updatedUser);
+        console.log('User premium access:', isPremium);
+
         console.log('Profile found, redirecting to main app');
         router.replace('/(tabs)');
+
       } else {
         setInitialCheckDone(true);
       }

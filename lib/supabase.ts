@@ -16,6 +16,7 @@ const ExpoSecureStoreAdapter = {
   },
 };
 
+// TODO: remove this from being visible in repo
 const appleRedirectUrl = 'https://etwwfjctkahkhltzvlvx.supabase.co/auth/v1/callback';
 
 // Get environment variables with fallbacks

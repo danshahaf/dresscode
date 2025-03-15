@@ -10,7 +10,9 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
+  setUser: React.Dispatch<React.SetStateAction<User | null>>; // <-- ADD THIS
 };
+
 
 // Create the auth context
 const AuthContext = createContext<AuthContextType>({
@@ -18,7 +20,9 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   loading: true,
   signOut: async () => {},
+  setUser: () => {}, // <-- ADD THIS (an empty function as a placeholder)
 });
+
 
 // Auth provider props
 interface AuthProviderProps {
@@ -97,7 +101,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   // Provide auth context
   return (
-    <AuthContext.Provider value={{ session, user, loading, signOut }}>
+    <AuthContext.Provider value={{ session, user, loading, signOut, setUser }}>
       {children}
       {/* <Text>AuthProvider Test</Text> */}
     </AuthContext.Provider>
