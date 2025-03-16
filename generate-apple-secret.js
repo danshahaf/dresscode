@@ -8,7 +8,7 @@ const fs = require('fs');
 const TEAM_ID = 'ZHCSTGTA8K';           // e.g., 1ABCD234E5
 const KEY_ID = 'VJL8USU499';             // e.g., V8LABS49U9
 const SERVICE_ID = 'com.seagulltechnologies.dresscode'; // Your Services ID
-const PRIVATE_KEY_PATH = './AuthKey_VJL8USU499.p8';        // Path to your downloaded .p8 file
+const PRIVATE_KEY_PATH = './AuthKey_7HHBPL4B3C.p8';        // Path to your downloaded .p8 file
 
 const privateKey = fs.readFileSync(PRIVATE_KEY_PATH);
 

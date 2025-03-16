@@ -4,15 +4,12 @@ import { Platform } from 'react-native';
 
 import { HapticTab } from '@/components/HapticTab';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import TabBarBackground from '@/components/ui/TabBarBackground';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
-  
-  // Golden color for active tabs
-  const activeColor = '#cca702'; // b39200 cca702 FFD700
-  // Black color for inactive tabs
+
+  const activeColor = '#cca702';
   const inactiveColor = '#000000';
 
   return (
@@ -22,33 +19,32 @@ export default function TabLayout() {
         tabBarInactiveTintColor: inactiveColor,
         headerShown: false,
         tabBarButton: HapticTab,
-        tabBarBackground: TabBarBackground,
         tabBarStyle: Platform.select({
           ios: {
-            // Use a transparent background on iOS to show the blur effect
             position: 'absolute',
-            backgroundColor: 'rgba(255, 255, 255, 0.85)', // Slightly less transparent
-            paddingTop: 10, // More padding at the top
-            paddingBottom: 2, // Less padding at the bottom
+            backgroundColor: '#ffffff',
+            paddingTop: 10,
+            paddingBottom: 2,
             borderTopLeftRadius: 25,
             borderTopRightRadius: 25,
-            borderTopWidth: 0, // Remove the default top border
-            shadowColor: '#000',
-            shadowOffset: { width: 0, height: -3 },
-            shadowOpacity: 0.1,
+            borderTopWidth: 0,
+            // Thin drop shadow outwardly
+            shadowColor: '#cca702',
+            shadowOffset: { width: 0, height: -1 },
+            shadowOpacity: 0.2,
             shadowRadius: 5,
-            marginBottom: -1, // Fix any gap that might appear
-            overflow: 'hidden',
+            marginBottom: -1,
+            overflow: 'visible', // allow shadow to extend outside
           },
           default: {
-            backgroundColor: 'rgba(255, 255, 255, 0.85)', // Slightly less transparent
-            paddingTop: 10, // More padding at the top
-            paddingBottom: 2, // Less padding at the bottom
+            backgroundColor: '#ffffff',
+            paddingTop: 10,
+            paddingBottom: 2,
             borderTopLeftRadius: 20,
             borderTopRightRadius: 20,
-            borderTopWidth: 0, // Remove the default top border
-            elevation: 8, // Add elevation for Android shadow
-            marginBottom: -1, // Fix any gap that might appear
+            borderTopWidth: 0,
+            elevation: 2, // minimal elevation for a thin shadow on Android
+            marginBottom: -1,
           },
         }),
       }}>
@@ -56,21 +52,27 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Scan',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="camera.viewfinder" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="camera.viewfinder" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="progress"
         options={{
           title: 'Looks',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="tshirt" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="tshirt" color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Profile',
-          tabBarIcon: ({ color }) => <IconSymbol size={28} name="star.fill" color={color} />,
+          tabBarIcon: ({ color }) => (
+            <IconSymbol size={28} name="star.fill" color={color} />
+          ),
         }}
       />
     </Tabs>

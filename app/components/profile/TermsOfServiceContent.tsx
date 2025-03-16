@@ -6,94 +6,95 @@ export const TermsOfServiceContent = () => {
   return (
     <View style={{ paddingVertical: 20, paddingHorizontal: 5 }}>
       <Text style={infoModalStyles.paragraph}>
-        Last Updated: August 15, 2023
+        Last Updated: March 15, 2025
       </Text>
       
       <Text style={infoModalStyles.paragraph}>
-        Please read these Terms of Service ("Terms") carefully before using our fitness tracking application (the "Service").
+        Please read these Terms of Service ("Terms") carefully before using Dresscode (the "Service"). By accessing or using the Service, you agree to be bound by these Terms. If you do not agree with any part of these Terms, please discontinue using the Service.
       </Text>
       
       <Text style={infoModalStyles.sectionTitle}>1. Acceptance of Terms</Text>
       <Text style={infoModalStyles.paragraph}>
-        By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the terms, you may not access the Service.
+        By using the Service, you confirm that you have read, understood, and agree to these Terms in full.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>2. Fitness Disclaimer</Text>
+      <Text style={infoModalStyles.sectionTitle}>2. Service Description</Text>
       <Text style={infoModalStyles.paragraph}>
-        The content provided through our Service is for informational purposes only and is not intended as medical advice, diagnosis, or treatment. Always consult with a qualified healthcare provider before beginning any exercise program, especially if you have any medical conditions or injuries.
+        Dresscode is a platform that allows users to upload images of their outfits and receive AI-generated rankings based on various style metrics. The Service leverages the OpenAI API for outfit evaluations.
       </Text>
-      
       <Text style={infoModalStyles.paragraph}>
-        You acknowledge that there are risks associated with physical activity and that you are voluntarily participating in these activities. Our Service does not replace professional fitness training or medical advice.
+        All images and information you provide are stored securely in our database. Rest assured, your content remains private and is not shared with any third parties.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>3. Account Registration</Text>
+      <Text style={infoModalStyles.sectionTitle}>3. User Content and Privacy</Text>
       <Text style={infoModalStyles.paragraph}>
-        To use certain features of our Service, you must register for an account. You agree to provide accurate information and keep it updated. You are responsible for maintaining the confidentiality of your account credentials and for all activities that occur under your account.
+        You retain full ownership of the images and information you submit. By using the Service, you grant us permission to store, process, and display your content solely to operate and improve the Service.
       </Text>
-      
-      <Text style={infoModalStyles.sectionTitle}>4. Subscription Services</Text>
       <Text style={infoModalStyles.paragraph}>
-        Some features of our Service require a paid subscription. Subscription fees are billed in advance on a recurring basis according to the plan you select. You can cancel your subscription at any time, but we do not provide refunds for partial subscription periods.
+        We are committed to protecting your privacy. Your content will remain confidential and will not be disclosed to any external parties without your explicit consent.
       </Text>
       
+      <Text style={infoModalStyles.sectionTitle}>4. Use of AI and Data Processing</Text>
       <Text style={infoModalStyles.paragraph}>
-        Premium features include personalized workout plans, advanced progress tracking, and nutrition guidance. Free features may be limited in scope and functionality.
+        The Service utilizes the OpenAI API to analyze and rank outfits based on criteria determined by our algorithms. While we strive for accuracy, these AI-generated evaluations are provided for informational purposes only.
       </Text>
-      
-      <Text style={infoModalStyles.sectionTitle}>5. User Content</Text>
       <Text style={infoModalStyles.paragraph}>
-        Our Service allows you to post, store, and share information related to your fitness journey. You retain ownership of your content, but grant us a license to use, reproduce, and display it in connection with providing and improving the Service.
+        You acknowledge that the results may vary and that the AI processing is automated. We are not liable for any discrepancies or errors in the ranking.
       </Text>
       
+      <Text style={infoModalStyles.sectionTitle}>5. Account Registration and Security</Text>
       <Text style={infoModalStyles.paragraph}>
-        You are solely responsible for your content and agree not to post anything that infringes on others' rights, is illegal, or violates these Terms.
+        Certain features of the Service require you to register for an account. You agree to provide accurate information during registration and to maintain the confidentiality of your login credentials. You are responsible for all activities under your account.
+      </Text>
+      <Text style={infoModalStyles.paragraph}>
+        Please notify us immediately if you suspect any unauthorized access to your account.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>6. Prohibited Activities</Text>
+      <Text style={infoModalStyles.sectionTitle}>6. Prohibited Conduct</Text>
       <Text style={infoModalStyles.paragraph}>
         You agree not to:
       </Text>
-      
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Use the Service for any illegal purpose</Text>
+        <Text style={infoModalStyles.bulletText}>Engage in any unlawful or fraudulent activity</Text>
       </View>
-      
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Attempt to gain unauthorized access to any part of the Service</Text>
+        <Text style={infoModalStyles.bulletText}>Infringe on the rights of others or post unauthorized content</Text>
       </View>
-      
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Interfere with or disrupt the Service or servers</Text>
+        <Text style={infoModalStyles.bulletText}>Attempt to disrupt or interfere with the Service or its infrastructure</Text>
       </View>
-      
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Share your account credentials with others</Text>
+        <Text style={infoModalStyles.bulletText}>Misuse the AI functionality for purposes beyond the intended scope of the Service</Text>
       </View>
       
       <Text style={infoModalStyles.sectionTitle}>7. Termination</Text>
       <Text style={infoModalStyles.paragraph}>
-        We may terminate or suspend your account immediately, without prior notice, if you breach these Terms. Upon termination, your right to use the Service will cease immediately.
+        We reserve the right to suspend or terminate your account and access to the Service immediately, without notice, if you breach these Terms. Upon termination, your right to use the Service will cease immediately.
       </Text>
       
       <Text style={infoModalStyles.sectionTitle}>8. Limitation of Liability</Text>
       <Text style={infoModalStyles.paragraph}>
-        To the maximum extent permitted by law, we shall not be liable for any indirect, incidental, special, consequential, or punitive damages resulting from your use or inability to use the Service.
+        To the fullest extent permitted by law, Dresscode and its developers shall not be liable for any indirect, incidental, consequential, or punitive damages arising from your use of, or inability to use, the Service.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>9. Changes to Terms</Text>
+      <Text style={infoModalStyles.sectionTitle}>9. Modifications to the Terms</Text>
       <Text style={infoModalStyles.paragraph}>
-        We reserve the right to modify these Terms at any time. We will provide notice of significant changes by posting the updated Terms on our Service. Your continued use of the Service after such changes constitutes your acceptance of the new Terms.
+        We may update these Terms from time to time. Significant changes will be communicated by updating the "Last Updated" date and posting a notice within the app. Your continued use of the Service after such changes constitutes your acceptance of the updated Terms.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>10. Contact Us</Text>
+      <Text style={infoModalStyles.sectionTitle}>10. Governing Law</Text>
       <Text style={infoModalStyles.paragraph}>
-        If you have any questions about these Terms, please contact us at legal@fitnessapp.com.
+        These Terms shall be governed by and construed in accordance with the laws applicable in your jurisdiction, without regard to its conflict of law provisions.
       </Text>
+      
+      {/* <Text style={infoModalStyles.sectionTitle}>11. Contact Us</Text>
+      <Text style={infoModalStyles.paragraph}>
+        If you have any questions or concerns about these Terms, please contact us at support@dresscodeapp.com.
+      </Text> */}
     </View>
   );
-}; 
+};

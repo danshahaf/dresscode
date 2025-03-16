@@ -8,7 +8,7 @@ export const HelpSupportContent = () => {
   return (
     <View style={{ paddingVertical: 20, paddingHorizontal: 5 }}>
       <Text style={infoModalStyles.paragraph}>
-        Welcome to our Help & Support center. Here you can find answers to common questions about your fitness journey and ways to contact our support team.
+        Welcome to the Dresscode Help & Support center. Here you can find answers to common questions about uploading outfits, receiving rankings, and managing your account.
       </Text>
       
       <Text style={infoModalStyles.sectionTitle}>Frequently Asked Questions</Text>
@@ -16,27 +16,27 @@ export const HelpSupportContent = () => {
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>How do I track my workouts?</Text>
+          <Text style={{ fontWeight: 'bold' }}>How do I upload an outfit?</Text>
           {'\n'}
-          Go to the Workout tab and tap "Start Workout". Choose your workout type and follow the prompts to track your sets, reps, and weights.
+          Go to the Scan tab and tap the camera icon to capture or select an outfit photo.
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>How do I view my progress?</Text>
+          <Text style={{ fontWeight: 'bold' }}>How do I view my outfit rankings?</Text>
           {'\n'}
-          Visit the Progress tab to see charts and statistics about your fitness journey, including weight lifted, body measurements, and workout frequency.
+          Visit the Looks tab to see AI-generated rankings and feedback on your uploaded outfits.
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>How do I set fitness goals?</Text>
+          <Text style={{ fontWeight: 'bold' }}>How can I edit my profile?</Text>
           {'\n'}
-          In the Progress tab, tap "Set Goals" to establish targets for weight, measurements, or workout performance.
+          Go to the Profile tab and tap on the edit button to update your details and preferences.
         </Text>
       </View>
       
@@ -45,59 +45,52 @@ export const HelpSupportContent = () => {
         <Text style={infoModalStyles.bulletText}>
           <Text style={{ fontWeight: 'bold' }}>How do I upgrade my subscription?</Text>
           {'\n'}
-          Go to Profile → Account → Manage Subscription to view available plans and upgrade options.
+          Navigate to Profile → Account → Manage Subscription to view available plans and upgrade options.
         </Text>
       </View>
       
-      <Text style={infoModalStyles.sectionTitle}>Workout Tips</Text>
+      <Text style={infoModalStyles.sectionTitle}>Tips for Using Dresscode</Text>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Rest between workouts:</Text> Allow 48 hours of recovery for muscle groups you've trained intensely.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Progressive overload:</Text> Gradually increase weight, reps, or sets to continue making progress.
+          <Text style={{ fontWeight: 'bold' }}>Upload Clear Images:</Text> Ensure your outfit photos are well-lit and focused for accurate AI evaluations.
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Proper form:</Text> Focus on technique before increasing weights to prevent injury.
+          <Text style={{ fontWeight: 'bold' }}>Explore Different Styles:</Text> Experiment with various looks and trends to see how the AI ranks your creativity.
         </Text>
       </View>
       
-      <Text style={infoModalStyles.sectionTitle}>Contact Support</Text>
+      {/* <Text style={infoModalStyles.sectionTitle}>Contact Support</Text>
       
       <Text style={infoModalStyles.paragraph}>
-        If you need additional help, our fitness support team is available:
+        If you need additional assistance, our support team is here to help:
       </Text>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          Email: support@fitnessapp.com
+          Email: support@dresscodeapp.com
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          Phone: (555) 123-4567 (Mon-Fri, 9am-5pm EST)
+          Phone: (555) 987-6543 (Mon-Fri, 9am-5pm EST)
         </Text>
       </View>
       
       <TouchableOpacity 
         style={styles.supportButton}
-        onPress={() => Linking.openURL('mailto:support@fitnessapp.com')}
+        onPress={() => Linking.openURL('mailto:support@dresscodeapp.com')}
       >
         <Text style={styles.supportButtonText}>Email Support</Text>
-      </TouchableOpacity>
+      </TouchableOpacity> */}
     </View>
   );
 };
@@ -117,4 +110,4 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-}); 
+});

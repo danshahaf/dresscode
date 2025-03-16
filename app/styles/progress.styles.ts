@@ -448,6 +448,7 @@ export const progressStyles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 12,
     color: '#cca702'
+    // marginTop: 12,
   },
   suggestionsText: {
     fontSize: 14,

@@ -31,6 +31,21 @@ const redirectUrl = makeRedirectUri({
   path: 'auth/callback',
 });
 
+const verifyAge = () => {
+  return new Promise((resolve, reject) => {
+    Alert.alert(
+      "Age Verification",
+      "Please confirm that you are at least 13 years old to use Dresscode.",
+      [
+        { text: "No", style: "cancel", onPress: () => reject(new Error("User is under 13")) },
+        { text: "Yes", onPress: () => resolve(true) }
+      ],
+      { cancelable: false }
+    );
+  });
+};
+
+
 // App brand colors
 const BRAND_GOLD = '#cca702';
 
@@ -132,6 +147,16 @@ export default function LoginScreen() {
       }
       console.log('User Session:', userData);
       if (userData.user) {
+        // Verify age before proceeding
+        try {
+          await verifyAge();
+        } catch (err) {
+          Alert.alert("Age Restriction", "You must be at least 13 years old to use Dresscode.");
+          await supabase.auth.signOut();
+          setInitialCheckDone(true);
+          return;
+        }
+        
         const { data: profileData, error: profileError } = await supabase
           .from('profiles')
           .select('*')
@@ -147,25 +172,25 @@ export default function LoginScreen() {
           }
           return;
         }
-
-         // Merge the profile data into the user object:
-         const updatedUser = {
+  
+        // Merge the profile data into the user object:
+        const updatedUser = {
           ...userData.user,
           subscription_plan: profileData.subscription_plan,
           subscription_status: profileData.subscription_status,
           subscription_expires_at: profileData.subscription_expires_at,
         };
-
+  
         // Update the global auth state with the updated user object.
         setUser(updatedUser);
-
+  
         // Optionally log the premium access status:
         const isPremium = hasPremiumAccess(updatedUser);
         console.log('User premium access:', isPremium);
-
+  
         console.log('Profile found, redirecting to main app');
         router.replace('/(tabs)');
-
+  
       } else {
         setInitialCheckDone(true);
       }
@@ -174,6 +199,7 @@ export default function LoginScreen() {
       setInitialCheckDone(true);
     }
   };
+  
 
   // Handle social sign-in flows
   const handleSocialSignIn = async (provider: 'google' | 'apple') => {

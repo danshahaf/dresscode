@@ -6,160 +6,104 @@ export const PrivacyPolicyContent = () => {
   return (
     <View style={{ paddingVertical: 20, paddingHorizontal: 5 }}>
       <Text style={infoModalStyles.paragraph}>
-        Last Updated: August 15, 2023
+        Last Updated: March 15, 2025
       </Text>
       
       <Text style={infoModalStyles.paragraph}>
-        This Privacy Policy describes how we collect, use, and disclose your information when you use our fitness tracking application (the "Service").
+        This Privacy Policy explains how Dresscode (“we”, “us”, or “our”) collects, uses, and safeguards your information when you use our app. Dresscode allows you to upload outfit photos and receive AI-powered style rankings. All data you provide is stored securely in our database and is never shared with third parties.
       </Text>
       
       <Text style={infoModalStyles.sectionTitle}>1. Information We Collect</Text>
       <Text style={infoModalStyles.paragraph}>
-        We collect several types of information to provide and improve our fitness tracking Service:
+        We collect information to provide and improve the Service. This may include:
       </Text>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Account Information:</Text> When you register, we collect your name, email address, and password.
+          <Text style={{ fontWeight: 'bold' }}>Account Information:</Text> When you register, we collect your name, email address, and other credentials.
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Profile Information:</Text> We collect information you provide in your profile, such as height, weight, age, gender, and fitness goals.
+          <Text style={{ fontWeight: 'bold' }}>Uploaded Content:</Text> Photos of your outfits and associated metadata.
         </Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
         <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Fitness Data:</Text> We collect data about your workouts, including exercises performed, sets, reps, weights, duration, and frequency.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Body Measurements:</Text> We store body measurements you enter, such as weight, body fat percentage, and circumference measurements.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Usage Data:</Text> We collect information about how you interact with our Service, including features used and time spent.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Device Information:</Text> We collect information about your device, including model, operating system, and unique identifiers.
+          <Text style={{ fontWeight: 'bold' }}>Usage Data:</Text> Information about how you use the Service, including interactions and app performance.
         </Text>
       </View>
       
       <Text style={infoModalStyles.sectionTitle}>2. How We Use Your Information</Text>
       <Text style={infoModalStyles.paragraph}>
-        We use your information for the following purposes:
+        We use your information for:
       </Text>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>To provide personalized workout recommendations and track your fitness progress</Text>
+        <Text style={infoModalStyles.bulletText}>Providing personalized outfit rankings and recommendations using AI.</Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>To analyze trends and improve our Service based on user behavior</Text>
+        <Text style={infoModalStyles.bulletText}>Improving and optimizing the Service based on user behavior.</Text>
       </View>
       
       <View style={infoModalStyles.bulletPoint}>
         <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>To communicate with you about your account, updates, and new features</Text>
+        <Text style={infoModalStyles.bulletText}>Communicating updates, new features, and important information regarding your account.</Text>
       </View>
       
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>To process subscription payments and manage your account</Text>
-      </View>
-      
-      <Text style={infoModalStyles.sectionTitle}>3. Health Data</Text>
+      <Text style={infoModalStyles.sectionTitle}>3. Data Security and Privacy</Text>
       <Text style={infoModalStyles.paragraph}>
-        We understand the sensitive nature of health and fitness data. We implement appropriate security measures to protect this information and will not use it for advertising purposes. We may use anonymized, aggregated fitness data for research and to improve our Service.
+        All images and personal information you provide are stored securely in our database. We design our system so that your data remains private—no one else has access to your content.
       </Text>
-      
-      <Text style={infoModalStyles.sectionTitle}>4. Sharing Your Information</Text>
       <Text style={infoModalStyles.paragraph}>
-        We may share your information in the following circumstances:
+        We implement industry-standard security measures to protect your data from unauthorized access.
       </Text>
       
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Service Providers:</Text> We work with third-party services for hosting, payment processing, and analytics.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Legal Requirements:</Text> We may disclose information if required by law or to protect rights and safety.
-        </Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>
-          <Text style={{ fontWeight: 'bold' }}>Business Transfers:</Text> If our company is acquired or merged, your information may be transferred.
-        </Text>
-      </View>
-      
-      <Text style={infoModalStyles.sectionTitle}>5. Data Retention</Text>
+      <Text style={infoModalStyles.sectionTitle}>4. Sharing and Disclosure</Text>
       <Text style={infoModalStyles.paragraph}>
-        We retain your information as long as your account is active or as needed to provide services. You can request deletion of your account and associated data at any time.
+        We do not sell or share your personal information or uploaded content with third parties. Your data is used solely to operate and improve the Service.
       </Text>
-      
-      <Text style={infoModalStyles.sectionTitle}>6. Your Rights</Text>
       <Text style={infoModalStyles.paragraph}>
-        Depending on your location, you may have rights to:
+        We may share information if required by law, or if it is necessary to protect our rights or the safety of our users.
       </Text>
       
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Access and receive a copy of your personal data</Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Correct inaccurate data</Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Request deletion of your data</Text>
-      </View>
-      
-      <View style={infoModalStyles.bulletPoint}>
-        <Text style={infoModalStyles.bullet}>•</Text>
-        <Text style={infoModalStyles.bulletText}>Restrict or object to certain processing</Text>
-      </View>
-      
-      <Text style={infoModalStyles.sectionTitle}>7. Children's Privacy</Text>
+      <Text style={infoModalStyles.sectionTitle}>5. Use of AI</Text>
       <Text style={infoModalStyles.paragraph}>
-        Our Service is not intended for children under 13. We do not knowingly collect information from children under 13. If you believe we have collected information from a child under 13, please contact us.
+        Dresscode uses the OpenAI API to generate outfit rankings and style evaluations. These AI-driven insights are for your informational purposes only and do not affect your ownership of any content you upload.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>8. Changes to This Privacy Policy</Text>
+      <Text style={infoModalStyles.sectionTitle}>6. Data Retention</Text>
       <Text style={infoModalStyles.paragraph}>
-        We may update our Privacy Policy from time to time. We will notify you of any changes by posting the new Privacy Policy on this page and updating the "Last Updated" date.
+        We retain your information as long as your account is active or as needed to provide the Service. You may request deletion of your account and its data at any time.
       </Text>
       
-      <Text style={infoModalStyles.sectionTitle}>9. Contact Us</Text>
+      <Text style={infoModalStyles.sectionTitle}>7. Your Rights</Text>
       <Text style={infoModalStyles.paragraph}>
-        If you have any questions about this Privacy Policy or our data practices, please contact us at privacy@fitnessapp.com.
+        Depending on your jurisdiction, you may have rights regarding your personal data, including the right to access, correct, or delete your information.
       </Text>
+      
+      <Text style={infoModalStyles.sectionTitle}>8. Children's Privacy</Text>
+      <Text style={infoModalStyles.paragraph}>
+        Our Service is not intended for children under 13. We do not knowingly collect personal information from children under 13. If you believe we have inadvertently collected such data, please contact us.
+      </Text>
+      
+      <Text style={infoModalStyles.sectionTitle}>9. Changes to This Privacy Policy</Text>
+      <Text style={infoModalStyles.paragraph}>
+        We may update this Privacy Policy from time to time. Significant changes will be communicated by updating the "Last Updated" date and posting a notice within the app.
+      </Text>
+      
+      {/* <Text style={infoModalStyles.sectionTitle}>10. Contact Us</Text>
+      <Text style={infoModalStyles.paragraph}>
+        If you have any questions or concerns about this Privacy Policy or our data practices, please contact us at privacy@dresscodeapp.com.
+      </Text> */}
     </View>
   );
-}; 
+};

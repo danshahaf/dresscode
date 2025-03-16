@@ -39,10 +39,11 @@ const isSimulator = () => {
 };
 
 
+
 export default function HomeScreen() {
   const { user } = useAuth();
-
   const router = useRouter();
+  
   const screenHeight = Dimensions.get('window').height;
   
   // State for selected image, modal, and analysis result

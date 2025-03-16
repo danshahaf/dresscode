@@ -9,7 +9,8 @@ import {
   Switch,
   ActivityIndicator,
   Alert,
-  StyleSheet
+  StyleSheet,
+  RefreshControl
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProfileHeader } from '@/app/components/profile/ProfileHeader';
@@ -27,6 +28,27 @@ import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import * as Notifications from 'expo-notifications';
+
+
+
+const registerForPushNotificationsAsync = async () => {
+  let token;
+  const { status: existingStatus } = await Notifications.getPermissionsAsync();
+  let finalStatus = existingStatus;
+  if (existingStatus !== 'granted') {
+    const { status } = await Notifications.requestPermissionsAsync();
+    finalStatus = status;
+  }
+  if (finalStatus !== 'granted') {
+    Alert.alert('Push Notifications', 'Failed to get push token for notifications.');
+    return null;
+  }
+  token = (await Notifications.getExpoPushTokenAsync()).data;
+  console.log('Expo Push Token:', token);
+  return token;
+};
+
 
 // Define types for form data
 interface FormData {
@@ -41,6 +63,8 @@ interface FormData {
 
 // Import the local default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/dummy-profile-image.png');
+
+const [refreshing, setRefreshing] = useState(false);
 
 
 
@@ -64,7 +88,78 @@ export default function ProfileScreen() {
   const [helpSupportVisible, setHelpSupportVisible] = useState(false);
   const [termsVisible, setTermsVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
+
+  // Helper function to request and get the push token
+  const registerForPushNotificationsAsync = async () => {
+    const { status: existingStatus } = await Notifications.getPermissionsAsync();
+    let finalStatus = existingStatus;
+    if (existingStatus !== 'granted') {
+      const { status } = await Notifications.requestPermissionsAsync();
+      finalStatus = status;
+    }
+    if (finalStatus !== 'granted') {
+      Alert.alert('Push Notifications', 'Permission not granted!');
+      return null;
+    }
+    const token = (await Notifications.getExpoPushTokenAsync()).data;
+    console.log('Expo Push Token:', token);
+    return token;
+  };
   
+  // In your component (e.g., in ProfileScreen), add a useEffect:
+  useEffect(() => {
+    if (user) {
+      const updatePushToken = async () => {
+        // Request push token from Expo
+        const token = await registerForPushNotificationsAsync();
+        if (token) {
+          // Update the user's profile with the push token
+          const { error } = await supabase
+            .from('profiles')
+            .update({ push_token: token })
+            .eq('user_id', user.id);
+          if (error) {
+            console.error('Error updating push token:', error);
+          } else {
+            console.log('Push token saved successfully!');
+          }
+        }
+      };
+      updatePushToken();
+    }
+  }, [user]);
+  
+  // function to feth the user data from supabase
+  const fetchUserData = async () => {
+    try {
+      setLoading(true);
+      // Fetch user email and profile data (adjust as needed)
+      const { data: userData } = await supabase.auth.getUser();
+      if (userData?.user?.email) {
+        setUserEmail(userData.user.email);
+      }
+      if (userData?.user?.id) {
+        const { data: profileData, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userData.user.id)
+          .single();
+        if (error && error.code !== 'PGRST116') {
+          throw error;
+        }
+        if (profileData) {
+          setUserProfile(profileData);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+  
+
   // Set status bar to transparent
   useEffect(() => {
     StatusBar.setBarStyle('light-content');
@@ -219,7 +314,7 @@ export default function ProfileScreen() {
     lastName: userData.lastName,
     location: userData.location,
     profileImage: typeof userData.profileImage === 'string' ? userData.profileImage : '',
-    notifications: true,
+    notifications: false,
     darkMode: true,
     currentPlan: userData.subscription
   });
@@ -239,28 +334,70 @@ export default function ProfileScreen() {
   
   // Handle form input changes
   const handleChange = async (field: keyof FormData, value: any) => {
+    // Update the form data locally
     setFormData({
       ...formData,
       [field]: value
     });
-    // If it's the notifications field, update the DB
-    if (field === 'notifications') {
-      setNotificationsEnabled(value);
-
-      if (user) {
-        // Update the profiles table
+    
+    if (field === 'notifications' && user) {
+      if (value === true) {
+        // Ask the user to confirm enabling notifications
+        Alert.alert(
+          "Allow Notifications",
+          "Do you want to allow notifications?",
+          [
+            {
+              text: "No",
+              style: "cancel",
+              onPress: async () => {
+                // User declined – ensure toggle remains off
+                setNotificationsEnabled(false);
+                // Update database to keep notifications disabled
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ notifications_enabled: false })
+                  .eq('user_id', user.id);
+                if (error) {
+                  console.error("Error updating notifications:", error);
+                }
+              }
+            },
+            {
+              text: "Yes",
+              onPress: async () => {
+                // User accepted – register for push notifications
+                const token = await registerForPushNotificationsAsync();
+                // Update DB: set notifications_enabled true and store push token
+                const { error } = await supabase
+                  .from('profiles')
+                  .update({ notifications_enabled: true, push_token: token })
+                  .eq('user_id', user.id);
+                if (error) {
+                  console.error("Error updating notifications:", error);
+                } else {
+                  setNotificationsEnabled(true);
+                }
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+      } else {
+        // If toggled off, simply update the DB accordingly.
+        setNotificationsEnabled(false);
         const { error } = await supabase
           .from('profiles')
-          .update({ notifications_enabled: value })
+          .update({ notifications_enabled: false })
           .eq('user_id', user.id);
-
         if (error) {
-          console.error('Error updating notifications_enabled:', error);
-          Alert.alert('Error', 'Could not update notifications preference.');
+          console.error("Error updating notifications:", error);
         }
       }
     }
   };
+  
+  
   
   // Format height for display
   const getFormattedHeight = () => {
@@ -434,6 +571,11 @@ export default function ProfileScreen() {
     }, 500);
   };
 
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchUserData(); // Ensure fetchUserData sets refreshing to false when done
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.loadingContainer}>
@@ -446,7 +588,17 @@ export default function ProfileScreen() {
     <View style={{ flex: 1 }}>
       <StatusBar translucent backgroundColor="transparent" />
       
-      <ScrollView style={profileScreenStyles.scrollView}>
+      <ScrollView
+        style={profileScreenStyles.scrollView}
+        refreshControl={
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh} 
+            tintColor="#cca702" 
+          />
+        }
+      >
+
         {/* Profile Header */}
         <ProfileHeader 
           user={userData} 
