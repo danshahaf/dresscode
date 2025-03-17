@@ -20,7 +20,6 @@ interface SubscriptionModalProps {
 }
 
 
-
 export const SubscriptionModal = ({ 
   visible, 
   onClose, 
@@ -31,8 +30,8 @@ export const SubscriptionModal = ({
 
   // Cast useStripe() to any so that presentApplePay is recognized.
   const { presentApplePay } = useStripe() as any;
+  console.log('presentApplePay:', presentApplePay);
   
-
   const updateSubscriptionStatus = async (newStatus: string, expiresAt: string): Promise<boolean> => {
     if (!user) return false;
     const { error } = await supabase

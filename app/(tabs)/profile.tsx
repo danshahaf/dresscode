@@ -30,26 +30,6 @@ import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import * as Notifications from 'expo-notifications';
 
-
-
-const registerForPushNotificationsAsync = async () => {
-  let token;
-  const { status: existingStatus } = await Notifications.getPermissionsAsync();
-  let finalStatus = existingStatus;
-  if (existingStatus !== 'granted') {
-    const { status } = await Notifications.requestPermissionsAsync();
-    finalStatus = status;
-  }
-  if (finalStatus !== 'granted') {
-    Alert.alert('Push Notifications', 'Failed to get push token for notifications.');
-    return null;
-  }
-  token = (await Notifications.getExpoPushTokenAsync()).data;
-  console.log('Expo Push Token:', token);
-  return token;
-};
-
-
 // Define types for form data
 interface FormData {
   firstName: string;
@@ -64,14 +44,11 @@ interface FormData {
 // Import the local default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/dummy-profile-image.png');
 
-const [refreshing, setRefreshing] = useState(false);
-
-
 
 export default function ProfileScreen() {
 
   const { user, signOut } = useAuth();
-
+  const [refreshing, setRefreshing] = useState(false);
   
   const router = useRouter();
   
@@ -169,45 +146,7 @@ export default function ProfileScreen() {
   }, []);
   
   // Fetch user data
-  useEffect(() => {
-    const fetchUserData = async () => {
-      try {
-        setLoading(true);
-        
-        // Get user email from auth
-        const { data: userData } = await supabase.auth.getUser();
-        if (userData?.user?.email) {
-          setUserEmail(userData.user.email);
-        }
-        
-        // Get user profile data
-        if (userData?.user?.id) {
-          const { data: profileData, error } = await supabase
-            .from('profiles')
-            .select('*')
-            .eq('user_id', userData.user.id)
-            .single();
-            
-          if (error && error.code !== 'PGRST116') {
-            throw error;
-          }
-          
-          if (profileData) {
-            setUserProfile(profileData);
-            // if notifications_enabled is not undefined, set notificationsEnabled to true or false
-            if (profileData.notifications_enabled !== undefined) {
-              setNotificationsEnabled(profileData.notifications_enabled);
-            }
-          }
-        }
-      } catch (error) {
-        console.error('Error fetching user data:', error);
-        Alert.alert('Error', 'Failed to load profile data');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+  useEffect(() => {    
     fetchUserData();
   }, []);
   
@@ -259,7 +198,7 @@ export default function ProfileScreen() {
     profileImage: getUserProfileImage(),
     height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
     location: userProfile?.location || '-',
-    subscription: userProfile?.subscription_plan || 'Missing',
+    subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
     email: userEmail
   });
   
@@ -275,8 +214,8 @@ export default function ProfileScreen() {
         lastName: userProfile?.last_name || lastName,
         profileImage: getUserProfileImage(),
         height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
-        location: userProfile?.location || '-',
-        subscription: userProfile?.subscription_plan + ' Plan' || 'Missing Plan',
+        location: userProfile?.location ?? '-',
+        subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
         email: userEmail
       });
       

@@ -23,6 +23,7 @@ import { InfoModal } from '@/app/components/profile/InfoModal';
 import { TermsOfServiceContent } from '@/app/components/profile/TermsOfServiceContent';
 import { PrivacyPolicyContent } from '@/app/components/profile/PrivacyPolicyContent';
 import { hasPremiumAccess } from '@/lib/premiumAccess';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -31,19 +32,45 @@ const redirectUrl = makeRedirectUri({
   path: 'auth/callback',
 });
 
-const verifyAge = () => {
-  return new Promise((resolve, reject) => {
-    Alert.alert(
-      "Age Verification",
-      "Please confirm that you are at least 13 years old to use Dresscode.",
-      [
-        { text: "No", style: "cancel", onPress: () => reject(new Error("User is under 13")) },
-        { text: "Yes", onPress: () => resolve(true) }
-      ],
-      { cancelable: false }
-    );
-  });
+const verifyAge = async () => {
+  try {
+    // Check if the age has already been verified
+    const isVerified = await AsyncStorage.getItem('ageVerified');
+    if (isVerified === 'true') {
+      // If already verified, immediately resolve
+      return true;
+    }
+
+    // Otherwise, prompt the user for verification
+    return new Promise((resolve, reject) => {
+      Alert.alert(
+        "Age Verification",
+        "Please confirm that you are at least 13 years old to use Dresscode.",
+        [
+          { 
+            text: "No", 
+            style: "cancel", 
+            onPress: () => reject(new Error("User is under 13")) 
+          },
+          { 
+            text: "Yes", 
+            onPress: async () => {
+              // Save the verification flag so the prompt doesn't show again
+              await AsyncStorage.setItem('ageVerified', 'true');
+              resolve(true);
+            } 
+          }
+        ],
+        { cancelable: false }
+      );
+    });
+  } catch (error) {
+    console.error('Error checking age verification:', error);
+    // In case of error, reject the verification
+    return Promise.reject(error);
+  }
 };
+
 
 
 // App brand colors
