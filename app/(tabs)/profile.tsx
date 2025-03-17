@@ -196,8 +196,8 @@ export default function ProfileScreen() {
     firstName: firstName,
     lastName: lastName,
     profileImage: getUserProfileImage(),
-    height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
-    location: userProfile?.location || '-',
+    height: formatHeightFromDB(userProfile?.height_feet ?? 0, userProfile?.height_inches ?? 0),
+    location: userProfile?.location ?? '-',
     subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
     email: userEmail
   });
@@ -213,7 +213,7 @@ export default function ProfileScreen() {
         firstName: userProfile?.first_name || firstName,
         lastName: userProfile?.last_name || lastName,
         profileImage: getUserProfileImage(),
-        height: formatHeightFromDB(userProfile?.height_feet, userProfile?.height_inches),
+        height: formatHeightFromDB(userProfile?.height_feet ?? 0, userProfile?.height_inches ?? 0),
         location: userProfile?.location ?? '-',
         subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
         email: userEmail
