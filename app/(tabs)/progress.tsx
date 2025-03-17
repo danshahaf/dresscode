@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList } from 'react-native';
+import { StyleSheet, View, Text, FlatList, RefreshControl } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressChart } from '@/app/components/progress/ProgressChart';
 import { OutfitTicket } from '@/app/components/progress/OutfitTicket';
@@ -33,6 +33,8 @@ function formatDate(dateString: string): string {
     return `${day} ${month}`;
   }
 }
+
+
 
 // second date formatting function
 const formatDateForChart = (dateObj: Date): string => {
@@ -71,6 +73,42 @@ export default function ProgressScreen() {
   const [detailModalVisible, setDetailModalVisible] = useState(false);
 
   const [dailyScores, setDailyScores] = useState<DailyScore[]>([]);
+  const [refreshing, setRefreshing] = useState(false);
+
+  async function fetchOutfits() {
+    try {
+      // Query the "outfits" table where the user_id matches the logged in user
+      const { data, error } = await supabase
+        .from('outfits')
+        .select('*')
+        .eq('user_id', user?.id)
+        .order('created_at', {ascending: false});
+
+      if (error) {
+        console.error('Error fetching outfits:', error);
+      } else {
+        // Convert snake_case fields from Supabase to camelCase for your app
+        const formattedData = (data || []).map((item: any) => ({
+          id: item.id,
+          user_id: item.user_id,
+          imageUrl: item.image_url,  // converting "image_url" to "imageUrl"
+          score: item.score,
+          date: formatDate(item.created_at),     // converting "created_at" to "date"
+        }));
+        setOutfits(formattedData);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching outfits:', err);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOutfits();
+    setRefreshing(false);
+  };
 
   useEffect(() => {
     const newOutfitId = searchParams.newOutfitId;
@@ -134,34 +172,6 @@ export default function ProgressScreen() {
   
   // Fetch outfits from Supabase
   useEffect(() => {
-    async function fetchOutfits() {
-      try {
-        // Query the "outfits" table where the user_id matches the logged in user
-        const { data, error } = await supabase
-          .from('outfits')
-          .select('*')
-          .eq('user_id', user?.id)
-          .order('created_at', {ascending: false});
-  
-        if (error) {
-          console.error('Error fetching outfits:', error);
-        } else {
-          // Convert snake_case fields from Supabase to camelCase for your app
-          const formattedData = (data || []).map((item: any) => ({
-            id: item.id,
-            user_id: item.user_id,
-            imageUrl: item.image_url,  // converting "image_url" to "imageUrl"
-            score: item.score,
-            date: formatDate(item.created_at),     // converting "created_at" to "date"
-          }));
-          setOutfits(formattedData);
-        }
-      } catch (err) {
-        console.error('Unexpected error fetching outfits:', err);
-      } finally {
-        setLoading(false);
-      }
-    }
     if (user) {
       fetchOutfits();
     }
@@ -208,6 +218,13 @@ export default function ProgressScreen() {
           contentContainerStyle={progressStyles.outfitsContainer}
           columnWrapperStyle={progressStyles.outfitGrid}
           showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl 
+              refreshing={refreshing} 
+              onRefresh={handleRefresh} 
+              tintColor="#cca702"
+            />
+          }
         />
 
         {/* Outfit Detail Modal */}
