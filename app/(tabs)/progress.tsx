@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, FlatList, RefreshControl } from 'react-native';
+import { StyleSheet, View, Text, FlatList, RefreshControl, ScrollView } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { ProgressChart } from '@/app/components/progress/ProgressChart';
 import { OutfitTicket } from '@/app/components/progress/OutfitTicket';
@@ -33,6 +33,7 @@ function formatDate(dateString: string): string {
     return `${day} ${month}`;
   }
 }
+
 
 
 
@@ -74,6 +75,12 @@ export default function ProgressScreen() {
 
   const [dailyScores, setDailyScores] = useState<DailyScore[]>([]);
   const [refreshing, setRefreshing] = useState(false);
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await fetchOutfits(); // or call all your refresh functions as needed
+    setRefreshing(false);
+  };
+  
 
   async function fetchOutfits() {
     try {
@@ -103,12 +110,6 @@ export default function ProgressScreen() {
       setLoading(false);
     }
   }
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
-    await fetchOutfits();
-    setRefreshing(false);
-  };
 
   useEffect(() => {
     const newOutfitId = searchParams.newOutfitId;
@@ -204,42 +205,47 @@ export default function ProgressScreen() {
 
   return (
     <SafeAreaView style={progressStyles.container}>
-      {/* Progress Chart */}
-      <ProgressChart dailyScores={dailyScores} /> 
-      
-      {/* Recent Outfits Section */}
-      <View>
-        <Text style={progressStyles.sectionTitle}>Recent Outfits</Text>
-        <FlatList
-          data={outfits}
-          renderItem={renderOutfitTicket}
-          keyExtractor={(item) => item.id.toString()}
-          numColumns={3}
-          contentContainerStyle={progressStyles.outfitsContainer}
-          columnWrapperStyle={progressStyles.outfitGrid}
-          showsVerticalScrollIndicator={false}
-          refreshControl={
-            <RefreshControl 
-              refreshing={refreshing} 
-              onRefresh={handleRefresh} 
-              tintColor="#cca702"
-            />
-          }
-        />
-
-        {/* Outfit Detail Modal */}
-        <OutfitDetailModal
-          visible={detailModalVisible}
-          outfit={selectedOutfit}
-          onClose={() => {
-            setDetailModalVisible(false);
-            // Reset selected outfit after animation completes
-            setTimeout(() => setSelectedOutfit(null), 300);
-          }}
-        />
-      </View>
+      <ScrollView
+        contentContainerStyle={{ flexGrow: 1 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={handleRefresh}
+            tintColor="#cca702"
+          />
+        }
+      >
+        {/* Progress Chart */}
+        <ProgressChart dailyScores={dailyScores} />
+        
+        {/* Recent Outfits Section */}
+        <View>
+          <Text style={progressStyles.sectionTitle}>Recent Outfits</Text>
+          <FlatList
+            data={outfits}
+            renderItem={renderOutfitTicket}
+            keyExtractor={(item) => item.id.toString()}
+            numColumns={3}
+            contentContainerStyle={progressStyles.outfitsContainer}
+            columnWrapperStyle={progressStyles.outfitGrid}
+            showsVerticalScrollIndicator={false}
+            // Remove refreshControl from here if you previously added it
+          />
+  
+          {/* Outfit Detail Modal */}
+          <OutfitDetailModal
+            visible={detailModalVisible}
+            outfit={selectedOutfit}
+            onClose={() => {
+              setDetailModalVisible(false);
+              setTimeout(() => setSelectedOutfit(null), 300);
+            }}
+          />
+        </View>
+      </ScrollView>
     </SafeAreaView>
   );
+  
 }
 
 const styles = StyleSheet.create({

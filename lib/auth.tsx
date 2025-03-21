@@ -10,7 +10,7 @@ type AuthContextType = {
   user: User | null;
   loading: boolean;
   signOut: () => Promise<void>;
-  setUser: React.Dispatch<React.SetStateAction<User | null>>; // <-- ADD THIS
+  setUser: React.Dispatch<React.SetStateAction<User | null>>;
 };
 
 

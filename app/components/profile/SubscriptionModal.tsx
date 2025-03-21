@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   View, 
   Text, 
@@ -11,6 +11,14 @@ import { subscriptionStyles } from '@/app/styles/profile.styles';
 import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
+import { StripeProvider } from '@stripe/stripe-react-native';
+
+
+// Define types for our helper function parameters.
+interface PaymentIntentParams {
+  amount: number;
+  gateway: string;
+}
 
 interface SubscriptionModalProps {
   visible: boolean;
@@ -19,7 +27,6 @@ interface SubscriptionModalProps {
   onSubscriptionSuccess?: () => void;
 }
 
-
 export const SubscriptionModal = ({ 
   visible, 
   onClose, 
@@ -27,45 +34,84 @@ export const SubscriptionModal = ({
   onSubscriptionSuccess,
 }: SubscriptionModalProps) => {
   const { user } = useAuth();
+  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
-  // Cast useStripe() to any so that presentApplePay is recognized.
-  const { presentApplePay } = useStripe() as any;
+  // Extract everything from useStripe() only once
+  const { presentApplePay, confirmApplePayPayment, isApplePaySupported } = useStripe() as any;
   console.log('presentApplePay:', presentApplePay);
-  
-  const updateSubscriptionStatus = async (newStatus: string, expiresAt: string): Promise<boolean> => {
-    if (!user) return false;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ 
-        subscription_status: newStatus,
-        subscription_expires_at: expiresAt, // ISO string date
-      })
-      .eq('user_id', user.id);
-    if (error) {
-      console.error('Error updating subscription status:', error);
-      Alert.alert('Error', 'Failed to update subscription status.');
-      return false;
-    }
-    return true;
-  };
-  
 
-  const updateSubscriptionPlan = async (newPlan: string): Promise<boolean> => {
-    if (!user) return false;
-    const { error } = await supabase
-      .from('profiles')
-      .update({ subscription_plan: newPlan })
-      .eq('user_id', user.id);
-    if (error) {
-      console.error('Error updating subscription plan:', error);
-      Alert.alert('Error', 'Failed to update subscription plan.');
-      return false;
-    }
+  // Set up local state for payment loading.
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
-    return true;
+  // API URL from your environment variable for your Edge Function.
+  const API_URL = process.env.EXPO_PUBLIC_STRIPE_FUNCTION_API || '';
+
+
+  // Helper function to fetch the PaymentIntent client secret from your Edge Function.
+  const fetchPaymentIntentClientSecret = async ({ amount, gateway }: PaymentIntentParams): Promise<string | undefined> => {
+    try {
+      const response = await fetch(API_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          amount: (amount * 100).toString(), // Stripe expects the amount in cents.
+          currency: 'USD', // Processing in dollars.
+          gateway: gateway,
+        }),
+      });
+      const data = await response.json();
+      return data?.client_secret;
+    } catch (error) {
+      console.log('Error fetching PaymentIntent:', error);
+    }
   };
 
-  // Handler for monthly plan
+  // Helper function for showing error messages.
+  const showErrorMessage = (message: string, amount: number) => {
+    Alert.alert("Payment Error", message);
+  };
+
+  // Helper function for handling success.
+  const onSuccess = (message: string) => {
+    Alert.alert("Payment Successful", message);
+  };
+
+  // Example implementation of the applePay function.
+  const applePay = async ({ amount }: { amount: number }): Promise<void> => {
+    if (!isApplePaySupported || paymentLoading) return;
+    setPaymentLoading(true);
+
+    // Show the Apple Pay sheet.
+    const { error } = await presentApplePay({
+      cartItems: [{ label: 'Top Up', amount: amount.toString(), type: 'final' }],
+      country: 'US',
+      currency: 'USD',
+    });
+
+    if (error) {
+      showErrorMessage(error?.message || '', amount);
+      setPaymentLoading(false);
+      return;
+    }
+
+    // Fetch the PaymentIntent client secret from your Edge Function.
+    const clientSecret = await fetchPaymentIntentClientSecret({ amount, gateway: 'applepay' });
+
+    if (clientSecret) {
+      const { error: confirmError } = await confirmApplePayPayment(clientSecret);
+      if (confirmError) {
+        showErrorMessage(confirmError?.localizedMessage || '', amount);
+      } else {
+        onSuccess(`Payment of USD ${amount} is successful!`);
+      }
+    }
+    setPaymentLoading(false);
+  };
+
+  // Existing functions for monthly and yearly plans.
   const handleApplePayMonthly = async () => {
     if (!user) {
       Alert.alert('Error', 'User not logged in');
@@ -87,7 +133,6 @@ export const SubscriptionModal = ({
     const currentDate = new Date();
     const expiresAt = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
   
-    // Update subscription_plan, subscription_status, and subscription_expires_at
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -107,9 +152,7 @@ export const SubscriptionModal = ({
     onClose();
     if (onSubscriptionSuccess) onSubscriptionSuccess();
   };
-  
-  
-  
+
   const handleApplePayYearly = async () => {
     if (!user) {
       Alert.alert('Error', 'User not logged in');
@@ -150,12 +193,9 @@ export const SubscriptionModal = ({
     onClose();
     if (onSubscriptionSuccess) onSubscriptionSuccess();
   };
-  
-  
-  //handling canceling subscription
+
   const handleCancelSubscription = async () => {
     console.log('Cancel Subscription button pressed');
-    // Example: Calculate expiration date (in production, retrieve this from Stripe via webhook or API)
     const currentDate = new Date();
     let expiresAt: Date;
     if (currentPlan.includes('Monthly')) {
@@ -163,7 +203,6 @@ export const SubscriptionModal = ({
     } else if (currentPlan.includes('Yearly')) {
       expiresAt = new Date(currentDate.setFullYear(currentDate.getFullYear() + 1));
     } else {
-      // Fallback or if already free:
       expiresAt = new Date();
     }
     
@@ -173,9 +212,37 @@ export const SubscriptionModal = ({
       onClose();
     }
   };
-  
-  
-  
+
+  const updateSubscriptionStatus = async (newStatus: string, expiresAt: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ 
+        subscription_status: newStatus,
+        subscription_expires_at: expiresAt,
+      })
+      .eq('user_id', user.id);
+    if (error) {
+      console.error('Error updating subscription status:', error);
+      Alert.alert('Error', 'Failed to update subscription status.');
+      return false;
+    }
+    return true;
+  };
+
+  const updateSubscriptionPlan = async (newPlan: string): Promise<boolean> => {
+    if (!user) return false;
+    const { error } = await supabase
+      .from('profiles')
+      .update({ subscription_plan: newPlan })
+      .eq('user_id', user.id);
+    if (error) {
+      console.error('Error updating subscription plan:', error);
+      Alert.alert('Error', 'Failed to update subscription plan.');
+      return false;
+    }
+    return true;
+  };
 
   return (
     <Modal
@@ -204,46 +271,58 @@ export const SubscriptionModal = ({
           
           {/* Plan Options */}
           <View style={subscriptionStyles.planOptionsContainer}>
-            <TouchableOpacity 
-              style={[
-                subscriptionStyles.planOption, 
-                currentPlan === 'Premium Monthly Plan' && subscriptionStyles.selectedPlan,
-                currentPlan === 'Premium Monthly Plan' && subscriptionStyles.disabledButton 
-              ]}
-              onPress={handleApplePayMonthly}
-              disabled={currentPlan === 'Premium Monthly Plan'}
+            <StripeProvider
+              publishableKey={publishableKey}
+              merchantIdentifier="merchant.com.dresscode"
+              urlScheme="dresscode"
             >
-              <View style={subscriptionStyles.planOptionHeader}>
-                <Text style={subscriptionStyles.planName}>Premium Monthly</Text>
-                <Text style={subscriptionStyles.planPrice}>$5.99/month</Text>
-              </View>
-              <Text style={subscriptionStyles.planDescription}>
-                Full access to all features with monthly billing
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[
-                subscriptionStyles.planOption, 
-                currentPlan === 'Premium Yearly Plan' && subscriptionStyles.selectedPlan,
-                currentPlan === 'Premium Yearly Plan' && subscriptionStyles.disabledButton
-              ]}
-              disabled={currentPlan === 'Premium Yearly Plan'}
-              onPress={handleApplePayYearly}
-            >
-              <View style={subscriptionStyles.planOptionHeader}>
-                <Text style={subscriptionStyles.planName}>Premium Yearly</Text>
-                <Text style={subscriptionStyles.planPrice}>$59.99/year</Text>
-              </View>
-              <Text style={[subscriptionStyles.planDescription, { color: 'green', fontWeight: 'bold' }]}>
-                Save 17% with annual billing
-              </Text>
-              {currentPlan === 'Premium Yearly Plan' && (
-                <View style={subscriptionStyles.currentPlanBadge}>
-                  <Text style={subscriptionStyles.currentPlanBadgeText}>Current Plan</Text>
+              <TouchableOpacity 
+                style={[
+                  subscriptionStyles.planOption, 
+                  currentPlan === 'Premium Monthly Plan' && subscriptionStyles.selectedPlan,
+                  currentPlan === 'Premium Monthly Plan' && subscriptionStyles.disabledButton 
+                ]}
+                onPress={handleApplePayMonthly}
+                disabled={currentPlan === 'Premium Monthly Plan'}
+              >
+                <View style={subscriptionStyles.planOptionHeader}>
+                  <Text style={subscriptionStyles.planName}>Premium Monthly</Text>
+                  <Text style={subscriptionStyles.planPrice}>$5.99/month</Text>
                 </View>
-              )}
-            </TouchableOpacity>
+                <Text style={subscriptionStyles.planDescription}>
+                  Full access to all features with monthly billing
+                </Text>
+              </TouchableOpacity>
+            </StripeProvider>
+            
+            <StripeProvider
+              publishableKey={publishableKey}
+              merchantIdentifier="merchant.com.dresscode"
+              urlScheme="dresscode"
+            >
+              <TouchableOpacity 
+                style={[
+                  subscriptionStyles.planOption, 
+                  currentPlan === 'Premium Yearly Plan' && subscriptionStyles.selectedPlan,
+                  currentPlan === 'Premium Yearly Plan' && subscriptionStyles.disabledButton
+                ]}
+                disabled={currentPlan === 'Premium Yearly Plan'}
+                onPress={handleApplePayYearly}
+              >
+                <View style={subscriptionStyles.planOptionHeader}>
+                  <Text style={subscriptionStyles.planName}>Premium Yearly</Text>
+                  <Text style={subscriptionStyles.planPrice}>$59.99/year</Text>
+                </View>
+                <Text style={[subscriptionStyles.planDescription, { color: 'green', fontWeight: 'bold' }]}>
+                  Save 17% with annual billing
+                </Text>
+                {currentPlan === 'Premium Yearly Plan' && (
+                  <View style={subscriptionStyles.currentPlanBadge}>
+                    <Text style={subscriptionStyles.currentPlanBadgeText}>Current Plan</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
+            </StripeProvider>
           </View>
           
           {/* Cancel Subscription Button */}
@@ -255,9 +334,9 @@ export const SubscriptionModal = ({
             onPress={handleCancelSubscription}
             disabled={currentPlan === 'Free Plan'}
           >
-            
             <Text style={subscriptionStyles.cancelSubscriptionText}>
-              Cancel Subscription</Text>
+              Cancel Subscription
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
