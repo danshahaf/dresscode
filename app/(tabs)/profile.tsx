@@ -24,7 +24,6 @@ import { TermsOfServiceContent } from '@/app/components/profile/TermsOfServiceCo
 import { PrivacyPolicyContent } from '@/app/components/profile/PrivacyPolicyContent';
 import { ChangePasswordModal } from '@/app/components/profile/ChangePasswordModal';
 import { profileScreenStyles, dimensions } from '@/app/styles/profile.screen.styles';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
@@ -167,23 +166,13 @@ export default function ProfileScreen() {
   
   // Prepare user data with profile image handling
   const getUserProfileImage = () => {
-    try {
-      console.log('Profile image URL from DB:', userProfile?.profile_image);
-      
-      if (userProfile?.profile_image) {
-        // Make sure the URL is valid and add cache-busting parameter
-        const imageUrl = `${userProfile.profile_image}?t=${Date.now()}`;
-        console.log('Using profile image URL with cache-busting:', imageUrl);
-        return { uri: imageUrl };
-      }
-      // Return the default image
-      console.log('Using default profile image');
-      return DEFAULT_PROFILE_IMAGE;
-    } catch (error) {
-      console.error('Error getting profile image:', error);
-      return DEFAULT_PROFILE_IMAGE;
+    if (userProfile?.profile_image) {
+      const imageUrl = `${userProfile.profile_image}?t=${Date.now()}`;
+      return { uri: imageUrl };
     }
+    return DEFAULT_PROFILE_IMAGE;
   };
+  
   
   // Format height from feet and inches
   const formatHeightFromDB = (feetVal: number | null, inchesVal: number | null) => {
@@ -252,7 +241,7 @@ export default function ProfileScreen() {
     firstName: userData.firstName,
     lastName: userData.lastName,
     location: userData.location,
-    profileImage: typeof userData.profileImage === 'string' ? userData.profileImage : '',
+    profileImage: userData.profileImage && userData.profileImage.uri ? userData.profileImage.uri : '',
     notifications: false,
     darkMode: true,
     currentPlan: userData.subscription
@@ -264,12 +253,15 @@ export default function ProfileScreen() {
       firstName: userData.firstName,
       lastName: userData.lastName,
       location: userData.location,
-      profileImage: typeof userData.profileImage === 'string' ? userData.profileImage : '',
+      profileImage: userData.profileImage && userData.profileImage.uri
+        ? userData.profileImage.uri
+        : '',
       notifications: notificationsEnabled,
       darkMode: darkModeEnabled,
       currentPlan: userData.subscription
     });
   }, [userData]);
+
   
   // Handle form input changes
   const handleChange = async (field: keyof FormData, value: any) => {
@@ -361,7 +353,6 @@ export default function ProfileScreen() {
       
       // Determine profile image (could be a string URL or an object with uri)
       let profileImageValue;
-      
       if (updatedData.profileImage) {
         if (typeof updatedData.profileImage === 'string') {
           profileImageValue = updatedData.profileImage;
@@ -377,20 +368,20 @@ export default function ProfileScreen() {
         profileImageValue = DEFAULT_PROFILE_IMAGE;
         console.log('No profile image provided, using default');
       }
-      
-      // Update local state
+
+      // Update local state with an object containing uri
       setUserData({
         ...userData,
         firstName: updatedData.firstName,
         lastName: updatedData.lastName,
         height: formattedHeight,
         location: updatedData.location,
-        profileImage: typeof profileImageValue === 'string' 
-          ? { uri: profileImageValue } 
+        profileImage: typeof profileImageValue === 'string'
+          ? { uri: profileImageValue }
           : profileImageValue
       });
-      
-      // Update form data
+
+      // Update form data so profileImage is stored as a URL string
       setFormData({
         ...formData,
         firstName: updatedData.firstName,

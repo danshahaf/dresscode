@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { BlurView } from 'expo-blur';
-import { IconSymbol } from '@/components/ui/IconSymbol';
 import { useRouter } from 'expo-router';
 import { useAuth } from '@/lib/auth';
 import { supabase, signInWithGoogle, signInWithApple } from '@/lib/supabase';
@@ -79,7 +78,7 @@ const BRAND_GOLD = '#cca702';
 // Enable WebBrowser redirect handling
 WebBrowser.maybeCompleteAuthSession();
 
-export default function LoginScreen() {
+const LoginScreen = () => {
   const router = useRouter();
   const { user, setUser } = useAuth();
   const [socialLoading, setSocialLoading] = useState<string | null>(null);
@@ -411,3 +410,5 @@ export default function LoginScreen() {
     </View>
   );
 }
+
+export default LoginScreen;

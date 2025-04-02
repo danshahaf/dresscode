@@ -255,7 +255,7 @@ export default function HomeScreen() {
     <View style={styles.container}>
       {/* Background Image */}
       <Image 
-        source={require('@/assets/images/cover-dresscode-4.png')} 
+        source={require('@/assets/images/cover-dresscode-5.png')} 
         style={styles.backgroundImage}
         resizeMode="cover"
       />

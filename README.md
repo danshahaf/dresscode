@@ -10,3 +10,8 @@ Run on EAS Simulator:
 ```bash
 eas build --profile development --platform ios
 ```
+
+then 
+```bash
+eas submit --platform ios --latest  
+```

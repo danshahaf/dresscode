@@ -27,10 +27,8 @@ If the image shows a human being wearing any clothing, rate the outfit based on 
 - Trendiness
 - Occasion match
 
-Compute one overall style score between 0 and 100 that reflects the outfit’s quality and aesthetic. Do not provide any additional commentary or breakdown—output only the final score in this exact format:
+Compute one overall ACCURATE (not always, but only if necessary, in increments of 5) style score between 0 and 100 that reflects the outfit’s quality and aesthetic. Do not provide any additional commentary or breakdown—output only the final score in this exact format:
 Final Score: X
-
-Ensure the final score displayed is not always (but some times can be) in increments of 5. the final score needs to be very accurate representation of how well oriented it is worn.
 
 If the image does not clearly depict a person wearing clothing or if the person appears nude, output only:
 No outfit detected`

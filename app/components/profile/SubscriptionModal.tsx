@@ -11,7 +11,6 @@ import { subscriptionStyles } from '@/app/styles/profile.styles';
 import { useStripe } from '@stripe/stripe-react-native';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
-import { StripeProvider } from '@stripe/stripe-react-native';
 
 
 // Define types for our helper function parameters.
@@ -34,7 +33,6 @@ export const SubscriptionModal = ({
   onSubscriptionSuccess,
 }: SubscriptionModalProps) => {
   const { user } = useAuth();
-  const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY || '';
 
   // Extract everything from useStripe() only once
   const { presentApplePay, confirmApplePayPayment, isApplePaySupported } = useStripe() as any;
@@ -117,22 +115,25 @@ export const SubscriptionModal = ({
       Alert.alert('Error', 'User not logged in');
       return;
     }
+    // Check if Apple Pay is supported
+    if (!isApplePaySupported) {
+      Alert.alert('Apple Pay', 'Apple Pay is not supported on this device. Please test on a real iOS device.');
+      return;
+    }
     console.log('Monthly Apple Pay button pressed');
     const { error } = await presentApplePay({
       cartItems: [{ label: 'Premium Monthly Subscription', amount: '5.99', type: 'final' }],
       country: 'US',
       currency: 'USD',
     });
-  
     if (error) {
       console.error('Apple Pay error:', error);
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
     }
-  
+    // Continue with subscription update
     const currentDate = new Date();
     const expiresAt = new Date(currentDate.setMonth(currentDate.getMonth() + 1));
-  
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -141,21 +142,23 @@ export const SubscriptionModal = ({
         subscription_expires_at: expiresAt.toISOString(),
       })
       .eq('user_id', user.id);
-  
     if (updateError) {
       console.error('Error updating subscription:', updateError);
       Alert.alert('Error', 'Failed to update subscription');
       return;
     }
-  
     Alert.alert('Success', 'Subscription updated to Premium Monthly.');
     onClose();
     if (onSubscriptionSuccess) onSubscriptionSuccess();
   };
-
+  
   const handleApplePayYearly = async () => {
     if (!user) {
       Alert.alert('Error', 'User not logged in');
+      return;
+    }
+    if (!isApplePaySupported) {
+      Alert.alert('Apple Pay', 'Apple Pay is not supported on this device. Please test on a real iOS device.');
       return;
     }
     console.log('Yearly Apple Pay button pressed');
@@ -164,16 +167,13 @@ export const SubscriptionModal = ({
       country: 'US',
       currency: 'USD',
     });
-  
     if (error) {
       console.error('Apple Pay error:', error);
       Alert.alert('Error', 'Apple Pay failed. Please try again.');
       return;
     }
-  
     const currentDate = new Date();
     const expiresAt = new Date(currentDate.setFullYear(currentDate.getFullYear() + 1));
-  
     const { error: updateError } = await supabase
       .from('profiles')
       .update({
@@ -182,17 +182,16 @@ export const SubscriptionModal = ({
         subscription_expires_at: expiresAt.toISOString(),
       })
       .eq('user_id', user.id);
-  
     if (updateError) {
       console.error('Error updating subscription:', updateError);
       Alert.alert('Error', 'Failed to update subscription');
       return;
     }
-  
     Alert.alert('Success', 'Subscription updated to Premium Yearly.');
     onClose();
     if (onSubscriptionSuccess) onSubscriptionSuccess();
   };
+  
 
   const handleCancelSubscription = async () => {
     console.log('Cancel Subscription button pressed');
@@ -271,11 +270,7 @@ export const SubscriptionModal = ({
           
           {/* Plan Options */}
           <View style={subscriptionStyles.planOptionsContainer}>
-            <StripeProvider
-              publishableKey={publishableKey}
-              merchantIdentifier="merchant.com.dresscode"
-              urlScheme="dresscode"
-            >
+            
               <TouchableOpacity 
                 style={[
                   subscriptionStyles.planOption, 
@@ -293,13 +288,7 @@ export const SubscriptionModal = ({
                   Full access to all features with monthly billing
                 </Text>
               </TouchableOpacity>
-            </StripeProvider>
-            
-            <StripeProvider
-              publishableKey={publishableKey}
-              merchantIdentifier="merchant.com.dresscode"
-              urlScheme="dresscode"
-            >
+  
               <TouchableOpacity 
                 style={[
                   subscriptionStyles.planOption, 
@@ -322,7 +311,6 @@ export const SubscriptionModal = ({
                   </View>
                 )}
               </TouchableOpacity>
-            </StripeProvider>
           </View>
           
           {/* Cancel Subscription Button */}

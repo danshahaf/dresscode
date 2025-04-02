@@ -337,7 +337,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                 {...panResponder.panHandlers}  // Attach panResponder to the fixed header if needed
               >
                 <Image 
-                  key={currentOutfit?.imageUrl} // Ensure image reloads when URL changes
+                  // key={currentOutfit?.imageUrl} // Ensure image reloads when URL changes
                   source={{ uri: currentOutfit?.imageUrl || outfit?.imageUrl || "" }} 
                   style={progressStyles.modalImageFull} 
                   resizeMode="cover"
