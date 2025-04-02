@@ -24,7 +24,3 @@ export default function RootLayout() {
   );
 }
 
-
-// eas build --profile development --platform ios
-// expo r -c
-// try these later 

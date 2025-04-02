@@ -9,6 +9,7 @@ module.exports = {
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     ios: {
+      merchantId: ["merchant.com.dresscode"],
       supportsTablet: true,
       bundleIdentifier: 'com.seagulltechnologies.dresscode',
       infoPlist: {

@@ -57,6 +57,30 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
     }
   }, [outfit, styleAnalysis]); // ✅ TRIGGER THIS WHEN STYLE ANALYSIS UPDATES
   
+  useEffect(() => {
+    const listenerId = scrollY.addListener(({ value }) => {
+      if (value > 150) { // adjust the threshold as needed
+        Animated.parallel([
+          Animated.timing(modalY, {
+            toValue: Dimensions.get('window').height,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+          Animated.timing(modalOpacity, {
+            toValue: 0,
+            duration: 300,
+            useNativeDriver: true,
+          }),
+        ]).start(() => {
+          onClose();
+          modalY.setValue(0);
+          modalOpacity.setValue(1);
+          scrollY.setValue(0);
+        });
+      }
+    });
+    return () => scrollY.removeListener(listenerId);
+  }, []);
   
   
   
@@ -334,10 +358,10 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                     top: 0, left: 0, right: 0, zIndex: 10 
                   }
                 ]}
-                {...panResponder.panHandlers}  // Attach panResponder to the fixed header if needed
+                // {...panResponder.panHandlers}  // Attach panResponder to the fixed header if needed
               >
                 <Image 
-                  // key={currentOutfit?.imageUrl} // Ensure image reloads when URL changes
+                  key={currentOutfit?.imageUrl} // Ensure image reloads when URL changes
                   source={{ uri: currentOutfit?.imageUrl || outfit?.imageUrl || "" }} 
                   style={progressStyles.modalImageFull} 
                   resizeMode="cover"

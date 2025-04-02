@@ -15,3 +15,8 @@ then
 ```bash
 eas submit --platform ios --latest  
 ```
+
+maybe also?
+```bash
+expo r -c
+``
