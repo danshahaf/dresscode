@@ -49,40 +49,10 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
   // store current outfit in a state
   const [currentOutfit, setCurrentOutfit] = useState<Outfit | null>(outfit);
   useEffect(() => {
-    if (outfit && outfit.imageUrl) {
-      setCurrentOutfit((prev) => {
-        if (prev?.id === outfit.id) return prev; // ✅ Prevent re-renders
-        return { ...outfit, imageUrl: prev?.imageUrl || outfit.imageUrl }; // ✅ ENSURE IMAGEURL IS NEVER LOST
-      });
+    if (outfit) {
+      setCurrentOutfit(outfit);
     }
-  }, [outfit, styleAnalysis]); // ✅ TRIGGER THIS WHEN STYLE ANALYSIS UPDATES
-  
-  useEffect(() => {
-    const listenerId = scrollY.addListener(({ value }) => {
-      if (value > 150) { // adjust the threshold as needed
-        Animated.parallel([
-          Animated.timing(modalY, {
-            toValue: Dimensions.get('window').height,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-          Animated.timing(modalOpacity, {
-            toValue: 0,
-            duration: 300,
-            useNativeDriver: true,
-          }),
-        ]).start(() => {
-          onClose();
-          modalY.setValue(0);
-          modalOpacity.setValue(1);
-          scrollY.setValue(0);
-        });
-      }
-    });
-    return () => scrollY.removeListener(listenerId);
-  }, []);
-  
-  
+  }, [outfit]);
   
   // Collapsible image height based on scroll
   const imageHeight = scrollY.interpolate({
@@ -90,8 +60,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
     outputRange: [fullImageHeight, collapsedImageHeight],
     extrapolate: 'clamp'
   });
-
-    
+  
   const { user } = useAuth();
   // Fetch the current subscription plan for the user
   useEffect(() => {
@@ -403,6 +372,27 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   [{ nativeEvent: { contentOffset: { y: scrollY } } }],
                   { useNativeDriver: false }
                 )}
+                onScrollEndDrag={({ nativeEvent }) => {
+                  if (nativeEvent.contentOffset.y > 150) {
+                    Animated.parallel([
+                      Animated.timing(modalY, {
+                        toValue: Dimensions.get('window').height,
+                        duration: 300,
+                        useNativeDriver: true,
+                      }),
+                      Animated.timing(modalOpacity, {
+                        toValue: 0,
+                        duration: 300,
+                        useNativeDriver: true,
+                      }),
+                    ]).start(() => {
+                      onClose();
+                      modalY.setValue(0);
+                      modalOpacity.setValue(1);
+                      scrollY.setValue(0);
+                    });
+                  }
+                }}
               >
                 <View style={progressStyles.analysisContentContainer}>
                   <Text style={progressStyles.aiAnalysisTitle}>Style Analysis</Text>

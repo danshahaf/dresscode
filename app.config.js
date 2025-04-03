@@ -15,7 +15,7 @@ module.exports = {
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
-      "entitlements": {
+      entitlements: {
         "com.apple.developer.in-app-payments": ["merchant.com.dresscode"],
         'aps-environment': 'production',
         'com.apple.developer.applesignin': ['Default'],
