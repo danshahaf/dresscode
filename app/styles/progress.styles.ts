@@ -169,25 +169,24 @@ export const progressStyles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  imageGradient: {
+  basicInfoContainer: {
     position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 100,
+    bottom: 10,
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    paddingHorizontal: 20,
-    paddingBottom: 15,
+    paddingHorizontal: 20,  
+    paddingBottom: 10,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
   },
   dateContainer: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingVertical: 6,
+    paddingVertical: 10,
     paddingHorizontal: 12,
-    borderRadius: 20,
+    borderRadius: 7,
   },
   dateText: {
     color: '#fff',
@@ -332,16 +331,12 @@ export const progressStyles = StyleSheet.create({
   aiSummaryContainer: {
     backgroundColor: '#f8f8f8',
     borderRadius: 12,
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
     padding: 15,
     marginBottom: 20,
-    borderLeftWidth: 4,
-    borderLeftColor: '#cca702',
   },
   aiSummaryText: {
     fontSize: 14,
-    color: '#333',
+    color: '#555',
     lineHeight: 20,
   },
   critiqueFeedback: {
@@ -359,7 +354,10 @@ export const progressStyles = StyleSheet.create({
     lineHeight: 20,
   },
   collapsibleScrollView: {
+    // position: 'fixed', 
     flex: 1,
+    top: -15,
+    zIndex: 10
   },
   collapsibleImageContainer: {
     width: '100%',
@@ -373,6 +371,8 @@ export const progressStyles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 20,
     minHeight: '100%',
+    // top: -20,
+    // zIndex: 999
   },
   scoreMetersList: {
     marginTop: 10,
@@ -488,6 +488,13 @@ export const progressStyles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 6,
   },
+  noAnalysisText: {
+    fontSize: 16,
+    color: '#888',
+    textAlign: 'center',
+    marginVertical: 20,
+  },
+  
 });
 
 export const chartDimensions = {
