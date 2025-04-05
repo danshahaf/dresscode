@@ -21,40 +21,55 @@ export const getScoreColor = (value: number): string => {
   return '#E53935';                   // Red for low scores - update this color
 };
 
-export const calculateChartPath = (
+export function calculateChartPath(
   dailyScores: DailyScore[],
-  effectiveWidth: number,
-  chartHeight: number,
+  width: number,
+  height: number,
   leftPadding: number
-) => {
-  // There are 7 days, so 6 intervals.
-  const numPoints = dailyScores.length; // should now be 8
-  const pointSpacing = effectiveWidth / (numPoints - 1);
-
+): { pathD: string; points: { x: number; y: number; isBeforeChart?: boolean; isLatest?: boolean; score: number | null; }[]; yMin: number; yMax: number } {
+  const numPoints = dailyScores.length;
+  const pointSpacing = width / (numPoints - 1);
   
-  // Map dailyScores to 7 points.
-  // If score is null, set y to baseline (chartHeight).
-  const points = dailyScores.map((ds, index) => {
-    const y = ds.score !== null ? chartHeight - (ds.score / 100) * chartHeight : chartHeight;
-    return { x: leftPadding + index * pointSpacing, y, score: ds.score };
-  });
-
-  let pathD = '';
-  // Filter out points with valid (non-null) scores
-  const validPoints = points.filter(p => p.score !== null);
-  if (validPoints.length > 1) {
-    pathD = `M ${validPoints[0].x} ${validPoints[0].y} `;
-    for (let i = 0; i < validPoints.length - 1; i++) {
-      const p0 = validPoints[i];
-      const p1 = validPoints[i + 1];
-      const cp1x = p0.x + (p1.x - p0.x) / 2;
-      const cp1y = p0.y;
-      const cp2x = p0.x + (p1.x - p0.x) / 2;
-      const cp2y = p1.y;
-      pathD += `C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p1.x} ${p1.y} `;
+  // Filter out points with null scores, but keep the point before the chart range
+  const validScores = dailyScores.filter(score => score.score !== null || score.isBeforeChart);
+  
+  // Calculate the min and max scores for the y-axis
+  let minScore = 0;
+  let maxScore = 100;
+  
+  if (validScores.length > 0) {
+    // Find the minimum and maximum scores
+    const scores = validScores.map(score => score.score).filter(score => score !== null) as number[];
+    if (scores.length > 0) {
+      minScore = Math.max(0, Math.min(...scores) - 10);
+      maxScore = Math.max(100, Math.max(...scores) + 10);
     }
   }
-
   
-  return { pathD, points };
-};
+  const points = dailyScores.map((score, index) => ({
+    x: leftPadding + index * pointSpacing,
+    y: height - ((score.score || 0) - minScore) / (maxScore - minScore) * height,
+    score: score.score,
+    isLatest: score.isLatest,
+    isBeforeChart: score.isBeforeChart
+  }));
+  
+  // Filter out points with null scores, but keep the point before the chart range
+  const validPoints = points.filter(point => point.score !== null || point.isBeforeChart);
+  
+  let pathD = '';
+  if (validPoints.length > 1) {
+    pathD = `M ${validPoints[0].x} ${validPoints[0].y}`;
+    for (let i = 1; i < validPoints.length; i++) {
+      const prev = validPoints[i - 1];
+      const curr = validPoints[i];
+      const cp1x = prev.x + (curr.x - prev.x) / 3;
+      const cp1y = prev.y;
+      const cp2x = curr.x - (curr.x - prev.x) / 3;
+      const cp2y = curr.y;
+      pathD += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${curr.x} ${curr.y}`;
+    }
+  }
+  
+  return { pathD, points, yMin: minScore, yMax: maxScore };
+}

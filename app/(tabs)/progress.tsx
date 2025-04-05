@@ -43,6 +43,7 @@ const formatDateForChart = (dateObj: Date): string => {
 interface DailyScore {
   date: string;
   score: number | null;
+  isBeforeChart?: boolean;
 }
 
 export default function ProgressScreen() {
@@ -108,22 +109,75 @@ export default function ProgressScreen() {
         const today = new Date();
         const startDate = new Date();
         startDate.setDate(today.getDate() - 7);
+        
+        // Add one more day before the start date to enable continuous line
+        const extendedStartDate = new Date(startDate);
+        extendedStartDate.setDate(startDate.getDate() - 1);
+        
+        // Fetch data for the chart range
         const { data, error } = await supabase
           .from('outfits')
           .select('created_at, score')
           .eq('user_id', user.id)
-          .gte('created_at', startDate.toISOString());
+          .gte('created_at', extendedStartDate.toISOString());
+        
         if (error) {
           console.error('Error fetching outfits for daily scores:', error);
           return;
         }
+        
+        // Fetch the latest score from the database (if any exists before the chart range)
+        const { data: latestData, error: latestError } = await supabase
+          .from('outfits')
+          .select('created_at, score')
+          .eq('user_id', user.id)
+          .lt('created_at', extendedStartDate.toISOString())
+          .order('created_at', { ascending: false })
+          .limit(10); // Fetch a few recent entries to calculate average
+        
+        if (latestError) {
+          console.error('Error fetching latest data before chart range:', latestError);
+        }
+        
         const scoresByDay: { [key: string]: number[] } = {};
         (data || []).forEach((outfit: any) => {
           const dayKey = outfit.created_at.slice(0, 10);
           if (!scoresByDay[dayKey]) scoresByDay[dayKey] = [];
           scoresByDay[dayKey].push(outfit.score);
         });
+        
         const daily: DailyScore[] = [];
+        
+        // Calculate the latest average score from the database
+        let latestAvgScore = null;
+        if (latestData && latestData.length > 0) {
+          // Group by day to calculate daily averages
+          const latestScoresByDay: { [key: string]: number[] } = {};
+          latestData.forEach((outfit: any) => {
+            const dayKey = outfit.created_at.slice(0, 10);
+            if (!latestScoresByDay[dayKey]) latestScoresByDay[dayKey] = [];
+            latestScoresByDay[dayKey].push(outfit.score);
+          });
+          
+          // Find the most recent day with data
+          const latestDay = Object.keys(latestScoresByDay).sort().pop();
+          if (latestDay) {
+            const scores = latestScoresByDay[latestDay];
+            latestAvgScore = scores.reduce((a, b) => a + b, 0) / scores.length;
+          }
+        }
+        
+        // Add the virtual point before the chart range using the latest average score
+        const dayBeforeChart = new Date(extendedStartDate);
+        dayBeforeChart.setDate(dayBeforeChart.getDate() - 1);
+        
+        daily.push({
+          date: formatDateForChart(dayBeforeChart),
+          score: latestAvgScore,
+          isBeforeChart: true // Mark this as the point before the chart
+        } as DailyScore);
+        
+        // Add the chart range days
         for (let i = 0; i < 8; i++) {
           const d = new Date(startDate);
           d.setDate(startDate.getDate() + i);
@@ -135,6 +189,7 @@ export default function ProgressScreen() {
             score: avgScore,
           });
         }
+        
         setDailyScores(daily);
       } catch (err) {
         console.error('Unexpected error fetching daily scores:', err);

@@ -6,22 +6,19 @@ import {
   TouchableOpacity, 
   Modal, 
   Animated, 
-  PanResponder,
   ActivityIndicator,
   Dimensions,
   ScrollView
 } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
 import { IconSymbol } from '@/components/ui/IconSymbol';
-import { Outfit, mockStyleAnalysis } from '@/app/data/progress.data';
+import { Outfit } from '@/app/data/progress.data';
 import { progressStyles } from '@/app/styles/progress.styles';
 import { ScoreMeter } from './ScoreMeter';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import { generateStyleAnalysis, StyleAnalysis } from '@/lib/openai';
 import { SubscriptionModal } from '@/app/components/profile/SubscriptionModal';
-import { SafeAreaProvider } from 'react-native-safe-area-context';
-
+import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface OutfitDetailModalProps {
   visible: boolean;
@@ -30,6 +27,9 @@ interface OutfitDetailModalProps {
 }
 
 export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModalProps) => {
+  // Get safe area insets to handle notches and home indicators
+  const insets = useSafeAreaInsets();
+  
   // States for style analysis and subscription
   const [styleAnalysis, setStyleAnalysis] = useState<StyleAnalysis | null>(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -40,43 +40,81 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
   const [aiAnalysisVisible, setAiAnalysisVisible] = useState(false);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   
-  
   // Animation values
   const modalY = useRef(new Animated.Value(0)).current;
   const modalOpacity = useRef(new Animated.Value(1)).current;
   const scrollY = useRef(new Animated.Value(0)).current;
   
   // Calculate image heights
-  const fullImageHeight = Dimensions.get('window').height * 0.65;
-  const collapsedImageHeight = Dimensions.get('window').height * 0.3;
-
-  // store current outfit in a state
-  const [currentOutfit, setCurrentOutfit] = useState<Outfit | null>(outfit);
-  useEffect(() => {
-    if (outfit && outfit.imageUrl) {
-      setCurrentOutfit((prev) => {
-        if (prev?.id === outfit.id) return prev; 
-        return { ...outfit, imageUrl: prev?.imageUrl || outfit.imageUrl }; 
-      });
-    }
-  }, [outfit, styleAnalysis]); 
+  const windowHeight = Dimensions.get('window').height;
+  const fullImageHeight = windowHeight * 0.7;
+  const collapsedImageHeight = windowHeight * 0.3;
   
+  // Calculate style analysis section heights
+  const initialAnalysisHeight = windowHeight * 0.4;
+  const expandedAnalysisHeight = windowHeight * 0.7;
   
-  // Collapsible image height based on scroll
+  // Interpolate image height based on scroll position
   const imageHeight = scrollY.interpolate({
     inputRange: [0, 100],
     outputRange: [fullImageHeight, collapsedImageHeight],
-    extrapolate: 'clamp'
+    extrapolate: 'clamp',
   });
-
-  const scrollViewRef = useRef<ScrollView | null>(null);
-
+  
+  // Interpolate analysis section height based on scroll position
+  const analysisHeight = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [initialAnalysisHeight, expandedAnalysisHeight],
+    extrapolate: 'clamp',
+  });
+  
+  // Interpolate analysis section top position based on scroll position
+  const analysisTop = scrollY.interpolate({
+    inputRange: [0, 100],
+    outputRange: [windowHeight * 0.6, windowHeight * 0.3],
+    extrapolate: 'clamp',
+  });
+  
+  // store current outfit in a state
+  const [currentOutfit, setCurrentOutfit] = useState<Outfit | null>(outfit);
+  
+  // Update currentOutfit when outfit prop changes
+  useEffect(() => {
+    if (outfit) {
+      setCurrentOutfit(outfit);
+      // Reset analysis state when outfit changes
+      setStyleAnalysis(null);
+      setAiAnalysisVisible(false);
+    }
+  }, [outfit]);
+  
+  // Add a simple function to close the modal
+  const closeModal = () => {
+    // Reset all state
+    setStyleAnalysis(null);
+    setAiAnalysisVisible(false);
+    modalY.setValue(0);
+    modalOpacity.setValue(1);
     
-  const { user } = useAuth();
+    // Call onClose to close the modal in the parent component
+    onClose();
+  };
+  
+  // Reset state when modal visibility changes
+  useEffect(() => {
+    if (visible) {
+      // Reset animation values when modal becomes visible
+      modalY.setValue(0);
+      modalOpacity.setValue(1);
+      // Reset scroll position to ensure style analysis section starts at 40% height
+      scrollY.setValue(0);
+    }
+  }, [visible]);
+  
   // Fetch the current subscription plan for the user
+  const { user } = useAuth();
   useEffect(() => {
     async function fetchSubscriptionPlan() {
-      
       if (!user) return;
       const { data, error } = await supabase
         .from('profiles')
@@ -173,59 +211,14 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
     }, 1500);
   };
   
-  const isScrollingDown = useRef(false);
-
-
-  // Create panResponder for swipe-to-dismiss gesture
-  const panResponder = useRef(
-    PanResponder.create({
-      onStartShouldSetPanResponder: (evt, gestureState) => {
-        const { locationY } = evt.nativeEvent;
-        return locationY <= fullImageHeight * 0.4;
-      },
-      onPanResponderMove: (evt, gestureState) => {
-        if (gestureState.dy > 0) {
-          modalY.setValue(gestureState.dy);
-          const newOpacity = 1 - gestureState.dy / 400;
-          modalOpacity.setValue(newOpacity > 0 ? newOpacity : 0);
-        }
-      },
-      onPanResponderRelease: (evt, gestureState) => {
-        if (gestureState.dy > 100) {
-          Animated.parallel([
-            Animated.timing(modalY, {
-              toValue: Dimensions.get('window').height,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-            Animated.timing(modalOpacity, {
-              toValue: 0,
-              duration: 300,
-              useNativeDriver: true,
-            }),
-          ]).start(() => {
-            onClose();
-            modalY.setValue(0);
-            modalOpacity.setValue(1);
-            scrollY.setValue(0);
-          });
-        } else {
-          Animated.parallel([
-            Animated.spring(modalY, {
-              toValue: 0,
-              friction: 8,
-              useNativeDriver: true,
-            }),
-            Animated.timing(modalOpacity, {
-              toValue: 1,
-              duration: 150,
-              useNativeDriver: true,
-            }),
-          ]).start();
-        }
-      },
-    })
-  ).current;
+  // Reset state when modal visibility changes
+  useEffect(() => {
+    if (visible) {
+      // Reset animation values when modal becomes visible
+      modalY.setValue(0);
+      modalOpacity.setValue(1);
+    }
+  }, [visible]);
   
   if (!outfit) return null;
   
@@ -240,12 +233,13 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
         setAiAnalysisVisible(false);
       }}
     >
-      <View style={progressStyles.modalContainer}>
+      <View style={[progressStyles.modalContainer, { paddingBottom: 0 }]}>
         <Animated.View 
           style={[
             progressStyles.modalContent,
-            { transform: [{ translateY: modalY }], opacity: modalOpacity }
+            { transform: [{ translateY: modalY }], opacity: modalOpacity, height: '100%' }
           ]}
+          // Remove the panResponder handlers
         >
           {/* Swipe indicator at top of modal */}
           <View style={progressStyles.swipeIndicatorContainer}>
@@ -261,7 +255,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   progressStyles.modalImageFullContainer,
                   { transform: [{ translateY: modalY }], opacity: modalOpacity }
                 ]}
-                {...panResponder.panHandlers}
+                // Remove the panResponder handlers
               >
                 <Image 
                   key={currentOutfit?.imageUrl} 
@@ -330,7 +324,7 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
             </>
           ) : (
             // ANALYSIS VIEW: Show the detailed AI analysis with fixed header image
-            <View style={progressStyles.fixedHeaderLayout}>
+            <View style={{ flex: 1 }}>
               {/* Fixed image header */}
               <Animated.View 
                 style={[
@@ -338,13 +332,11 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   { 
                     height: imageHeight, 
                     position: 'absolute', 
-                    top: 0, left: 0, right: 0, zIndex: 10 
+                    top: 0, left: 0, right: 0, zIndex: 1 
                   }
                 ]}
-                {...panResponder.panHandlers}  // Attach panResponder to the fixed header if needed
               >
-                <Image 
-                  key={currentOutfit?.imageUrl} // Ensure image reloads when URL changes
+                <Image
                   source={{ uri: currentOutfit?.imageUrl || outfit?.imageUrl || "" }} 
                   style={progressStyles.modalImageFull} 
                   resizeMode="cover"
@@ -370,66 +362,98 @@ export const OutfitDetailModal = ({ visible, outfit, onClose }: OutfitDetailModa
                   </View>
                 </View>
               </Animated.View>
+              
               {/* Scrollable analysis content - STYLE ANALYSIS SECTION */}
-              <Animated.ScrollView
-                style={progressStyles.collapsibleScrollView}
-                contentContainerStyle={{ 
-                  paddingTop: imageHeight,
-                  minHeight: Dimensions.get('window').height * 0.7
-                }}
-                showsVerticalScrollIndicator={false}
-                scrollEventThrottle={16}
-                onScroll={Animated.event(
-                  [{ nativeEvent: { contentOffset: { y: scrollY } } }],
-                  { useNativeDriver: false,
+              <Animated.View style={{
+                position: 'absolute',
+                top: analysisTop,
+                left: 0,
+                right: 0,
+                height: analysisHeight,
+                backgroundColor: 'white',
+                borderTopLeftRadius: 20,
+                borderTopRightRadius: 20,
+                zIndex: 10,
+              }}>
+                <ScrollView
+                  style={{ flex: 1 }}
+                  contentContainerStyle={{ paddingBottom: 40 }}
+                  showsVerticalScrollIndicator={false}
+                  onScroll={Animated.event(
+                    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+                    { useNativeDriver: false }
+                  )}
+                  scrollEventThrottle={16}
+                >
+                  <View style={[progressStyles.analysisContentContainer, { paddingTop: 20 }]}>
+                    <Text style={progressStyles.aiAnalysisTitle}>Dresscode AI</Text>
                     
-                   }
-                )}
-              >
-                <View style={progressStyles.analysisContentContainer}>
-                  <Text style={progressStyles.aiAnalysisTitle}>Dresscode AI</Text>
-                  <View style={progressStyles.aiSummaryContainer}>
-                  <Text style={progressStyles.suggestionsTitle}>Overview</Text>
-                    <Text style={progressStyles.aiSummaryText}>
-                      {styleAnalysis!.textAnalysis}
-                    </Text>
-                  </View>
-                  <View style={progressStyles.metricsGridContainer}>
-                    <View style={progressStyles.metricsRow}>
-                      <ScoreMeter label="Color Harmony" data={styleAnalysis!.colorHarmony} />
-                      <ScoreMeter label="Fit & Silhouette" data={styleAnalysis!.fitAndSilhouette} />
-                    </View>
-                    <View style={progressStyles.metricsRow}>
-                      <ScoreMeter label="Style Coherence" data={styleAnalysis!.styleCoherence} />
-                      <ScoreMeter label="Accessories" data={styleAnalysis!.accessorizing} />
-                    </View>
-                    <View style={progressStyles.metricsRow}>
-                      <ScoreMeter label="Occasion Match" data={styleAnalysis!.occasionMatch} />
-                      <ScoreMeter label="Trend Awareness" data={styleAnalysis!.trendAwareness} />
-                    </View>
-                  </View>
-                  {/* Suggestions Section */}
-                  <View>
+                    {subscriptionPlan !== 'Free' ? (
+                      <>
+                        <View style={progressStyles.aiSummaryContainer}>
+                          <Text style={progressStyles.suggestionsTitle}>Overview</Text>
+                          <Text style={progressStyles.aiSummaryText}>
+                            {styleAnalysis!.textAnalysis}
+                          </Text>
+                        </View>
+                        <View style={progressStyles.metricsGridContainer}>
+                          <View style={progressStyles.metricsRow}>
+                            <ScoreMeter label="Color Harmony" data={styleAnalysis!.colorHarmony} />
+                            <ScoreMeter label="Fit & Silhouette" data={styleAnalysis!.fitAndSilhouette} />
+                          </View>
+                          <View style={progressStyles.metricsRow}>
+                            <ScoreMeter label="Style Coherence" data={styleAnalysis!.styleCoherence} />
+                            <ScoreMeter label="Accessories" data={styleAnalysis!.accessorizing} />
+                          </View>
+                          <View style={progressStyles.metricsRow}>
+                            <ScoreMeter label="Occasion Match" data={styleAnalysis!.occasionMatch} />
+                            <ScoreMeter label="Trend Awareness" data={styleAnalysis!.trendAwareness} />
+                          </View>
+                        </View>
+                        {/* Suggestions Section */}
+                        <View style={progressStyles.suggestionsContainer}>
+                          <Text style={progressStyles.suggestionsTitle}>AI Suggestions</Text>
+                          <Text style={progressStyles.suggestionsText}>
+                            {styleAnalysis?.suggestions}
+                          </Text>
+                        </View>
+                      </>
+                    ) : (
+                      <View style={progressStyles.aiSummaryContainer}>
+                        <Text style={progressStyles.suggestionsTitle}>Premium Feature</Text>
+                        <Text style={progressStyles.aiSummaryText}>
+                          Upgrade to Premium to unlock detailed AI analysis of your outfit, including color harmony, fit & silhouette, style coherence, and personalized suggestions.
+                        </Text>
+                        <TouchableOpacity 
+                          style={[progressStyles.aiCritiqueButton, { marginTop: 20 }]}
+                          onPress={() => setSubscriptionModalVisible(true)}
+                        >
+                          <IconSymbol size={20} name="sparkles" color="#fff" style={{ marginRight: 10 }} />
+                          <Text style={progressStyles.aiCritiqueText}>Upgrade to Premium</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
                     
+                    <TouchableOpacity 
+                      style={[progressStyles.backButton, {
+                        backgroundColor: '#f5f5f5',
+                        paddingVertical: 15,
+                        borderRadius: 12,
+                        width: '100%',
+                        alignItems: 'center',
+                        marginTop: 20,
+                      }]}
+                      onPress={closeModal}
+                    >
+                      <Text style={[progressStyles.backButtonText, {
+                        color: '#333',
+                        fontSize: 16,
+                        fontWeight: '500',
+                      }]}>Back to Outfits</Text>
+                    </TouchableOpacity>
                   </View>
-                  <View style={progressStyles.suggestionsContainer}>
-                    <Text style={progressStyles.suggestionsTitle}>AI Suggestions</Text>
-                    <Text style={progressStyles.suggestionsText}>
-                      {styleAnalysis?.suggestions}
-                    </Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={progressStyles.backButton}
-                    onPress={() => {
-                      setAiAnalysisVisible(false);
-                      scrollY.setValue(0);
-                    }}
-                  >
-                    <Text style={progressStyles.backButtonText}>Back to Outfit</Text>
-                  </TouchableOpacity>
-                  <View style={{ height: 40 }} />
-                </View>
-              </Animated.ScrollView>
+                </ScrollView>
+              </Animated.View>
             </View>
           )}
           

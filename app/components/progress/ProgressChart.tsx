@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text } from 'react-native';
+import React, { useMemo } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import Svg, { Path, Circle, Line, Text as SvgText, G } from 'react-native-svg';
 import { DailyScore } from '@/app/data/progress.data';
 import { progressStyles, chartDimensions } from '@/app/styles/progress.styles';
@@ -11,41 +11,109 @@ interface ProgressChartProps {
 
 export const ProgressChart = ({ dailyScores }: ProgressChartProps) => {
   // Left padding for the chart
-  const leftPadding = 20;
+  const leftPadding = 30;
   // Compute effective width for plotting the points
   const effectiveWidth = chartDimensions.width - leftPadding - 10;
 
   // Calculate the chart path and points
-  const { pathD, points } = calculateChartPath(
+  const { pathD, points, yMin, yMax } = calculateChartPath(
     dailyScores,
-    effectiveWidth,
-    chartDimensions.height,
+    chartDimensions.width - leftPadding - 10,
+    chartDimensions.height - 40,
     leftPadding
   );
 
-  // Use formatDate if needed; here we assume dailyScores.date is already formatted.
-  const formatDate = (dateStr: string) => dateStr;
+  // Find the point before the chart range and the leftmost point in the chart
+  const beforeChartPoint = points.find(point => point.isBeforeChart);
+  const leftmostPoint = points.find(point => !point.isBeforeChart);
+
+  // Create a dashed path from the point before the chart range to the leftmost point
+  let dashedPathD = '';
+  if (beforeChartPoint && leftmostPoint && beforeChartPoint.score !== null && leftmostPoint.score !== null) {
+    dashedPathD = `M ${beforeChartPoint.x} ${beforeChartPoint.y} L ${leftmostPoint.x} ${leftmostPoint.y}`;
+  }
+
+  // Format date to display actual date instead of "Yesterday"
+  const formatDate = (dateStr: string) => {
+    // If the date is "Yesterday", replace it with the actual date
+    if (dateStr === "Yesterday") {
+      const yesterday = new Date();
+      yesterday.setDate(yesterday.getDate() - 1);
+      const day = yesterday.getDate();
+      const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+      return `${day} ${monthNames[yesterday.getMonth()]}`;
+    }
+    return dateStr;
+  };
+
+  // Calculate point spacing based on the number of points
+  const pointSpacing = useMemo(() => {
+    return (chartDimensions.width - leftPadding - 10) / (dailyScores.length - 1);
+  }, [chartDimensions.width, leftPadding, dailyScores.length]);
+
+  // Calculate y-axis label values
+  const yAxisLabels = useMemo(() => {
+    const range = yMax - yMin;
+    const step = Math.ceil(range / 4);
+    const labels = [];
+    
+    for (let i = 0; i <= 4; i++) {
+      const value = yMin + (step * i);
+      if (value <= yMax) {
+        labels.push(value);
+      }
+    }
+    
+    return labels;
+  }, [yMin, yMax]);
 
   return (
-    <View style={progressStyles.chartContainer}>
+    <View style={[progressStyles.chartContainer, styles.customChartContainer]}>
       <View style={progressStyles.chartHeader}>
         <Text style={progressStyles.chartTitle}>Style Progress</Text>
         <Text style={progressStyles.chartLegend}>Last 7 days</Text>
       </View>
       
-      <Svg style={progressStyles.svgContainer} viewBox={`0 0 ${chartDimensions.width} ${chartDimensions.height + 30}`}>
+      <Svg style={styles.customSvgContainer} viewBox={`0 0 ${chartDimensions.width} ${chartDimensions.height + 20}`}>
         {/* Draw horizontal grid lines */}
-        <Line x1={leftPadding} y1={chartDimensions.height * 0.25} x2={chartDimensions.width} y2={chartDimensions.height * 0.25} stroke="#eee" strokeWidth="1" />
-        <Line x1={leftPadding} y1={chartDimensions.height * 0.5} x2={chartDimensions.width} y2={chartDimensions.height * 0.5} stroke="#eee" strokeWidth="1" />
-        <Line x1={leftPadding} y1={chartDimensions.height * 0.75} x2={chartDimensions.width} y2={chartDimensions.height * 0.75} stroke="#eee" strokeWidth="1" />
+        {yAxisLabels.map((label, index) => {
+          const y = chartDimensions.height - ((label - yMin) / (yMax - yMin) * chartDimensions.height);
+          return (
+            <Line 
+              key={`grid-${index}`}
+              x1={leftPadding} 
+              y1={y} 
+              x2={chartDimensions.width} 
+              y2={y} 
+              stroke="#eee" 
+              strokeWidth="1" 
+            />
+          );
+        })}
         
         {/* Score labels */}
-        <SvgText x="0" y={chartDimensions.height * 0.25 + 4} fontSize="10" fill="#999" textAnchor="start">75</SvgText>
-        <SvgText x="0" y={chartDimensions.height * 0.5 + 4} fontSize="10" fill="#999" textAnchor="start">50</SvgText>
-        <SvgText x="0" y={chartDimensions.height * 0.75 + 4} fontSize="10" fill="#999" textAnchor="start">25</SvgText>
-        <SvgText x="0" y={chartDimensions.height + 4} fontSize="10" fill="#999" textAnchor="start">0</SvgText>
+        {yAxisLabels.map((label, index) => {
+          const y = chartDimensions.height - ((label - yMin) / (yMax - yMin) * chartDimensions.height);
+          return (
+            <SvgText 
+              key={`label-${index}`}
+              x="0" 
+              y={y + 4} 
+              fontSize="10" 
+              fill="#999" 
+              textAnchor="start"
+            >
+              {Math.round(label)}
+            </SvgText>
+          );
+        })}
         
-        {/* Draw the chart line if path exists */}
+        {/* Draw the dashed line from the point before the chart range to the leftmost point */}
+        {dashedPathD !== '' && (
+          <Path d={dashedPathD} fill="none" stroke="#cca702" strokeWidth="2" strokeDasharray="5,5" />
+        )}
+        
+        {/* Draw the main chart line */}
         {pathD !== '' && (
           <Path d={pathD} fill="none" stroke="#cca702" strokeWidth="2" />
         )}
@@ -53,8 +121,8 @@ export const ProgressChart = ({ dailyScores }: ProgressChartProps) => {
         {/* Draw data points, score labels, and date labels */}
         {points.map((point, index) => (
           <G key={index}>
-            {/* Always draw the circle and score dot to have a continuous line */}
-            {dailyScores[index].score !== null && (
+            {/* Only draw the circle for points that are not the virtual point */}
+            {dailyScores[index].score !== null && !point.isBeforeChart && (
               <Circle 
                 cx={point.x}
                 cy={point.y}
@@ -64,8 +132,8 @@ export const ProgressChart = ({ dailyScores }: ProgressChartProps) => {
                 strokeWidth="2"
               />
             )}
-            {/* Only display score and date labels if index is not 0 */}
-            {index !== 0 && (
+            {/* Only display score and date labels if index is not 0 and not the virtual point */}
+            {index !== 0 && !point.isBeforeChart && (
               <>
                 {dailyScores[index].score !== null && (
                   <SvgText 
@@ -100,8 +168,18 @@ export const ProgressChart = ({ dailyScores }: ProgressChartProps) => {
             )}
           </G>
         ))}
-
       </Svg>
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  customChartContainer: {
+    marginHorizontal: 5, // Reduced from 10 to 5 to provide more space
+    paddingRight: 15, // Added extra padding on the right to ensure "Today" is visible
+  },
+  customSvgContainer: {
+    height: 140,
+    width: '100%',
+  },
+});

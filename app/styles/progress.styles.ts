@@ -1,7 +1,7 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - 60;
+const chartWidth = screenWidth - 10;
 const ticketWidth = (screenWidth - 50) / 3;
 
 export const progressStyles = StyleSheet.create({
@@ -34,19 +34,19 @@ export const progressStyles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   chartContainer: {
-    marginHorizontal: 20,
+    marginHorizontal: 10,
     marginBottom: 20,
     marginTop: 10,
     backgroundColor: '#f8f8f8',
     borderRadius: 15,
-    padding: 15,
+    padding: 10,
     paddingBottom: 0,
   },
   chartHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 15,
+    marginBottom: 10,
   },
   chartTitle: {
     fontSize: 16,
@@ -58,7 +58,7 @@ export const progressStyles = StyleSheet.create({
     color: '#666',
   },
   svgContainer: {
-    height: 180,
+    height: 140,
     width: '100%',
   },
   dateLabels: {
@@ -133,7 +133,7 @@ export const progressStyles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   modalContent: {
-    height: '95%',
+    height: '100%',
     backgroundColor: 'transparent', // animated container is transparent
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
@@ -370,7 +370,7 @@ export const progressStyles = StyleSheet.create({
     paddingTop: 20,
     paddingHorizontal: 20,
     paddingBottom: 20,
-    minHeight: '100%',
+    // minHeight: '100%',
     // top: -20,
     // zIndex: 999
   },

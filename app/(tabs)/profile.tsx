@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   View, 
   Text, 
@@ -28,8 +28,6 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import * as Notifications from 'expo-notifications';
-import { useUserProfile } from '../components/profile/UserProfileContext';
-
 
 // Define types for form data
 interface FormData {
@@ -45,26 +43,38 @@ interface FormData {
 // Import the local default profile image
 const DEFAULT_PROFILE_IMAGE = require('@/assets/images/dummy-profile-image.png');
 
+// Simple profile interface
+interface Profile {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  profileImage: string | null;
+  location: string | null;
+  subscription: string;
+  heightFeet: number | null;
+  heightInches: number | null;
+  notificationsEnabled: boolean;
+  darkModeEnabled: boolean;
+  pushToken: string | null;
+}
 
 export default function ProfileScreen() {
-  const { profile } = useUserProfile();
-  const profileImageSource = profile?.profileImage
-    ? { uri: `${profile.profileImage}?t=${Date.now()}` }
-    : DEFAULT_PROFILE_IMAGE;
-
-
+  // Replace useUserProfile with local state
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const { user, signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
   
   const router = useRouter();
   
-  const [loading, setLoading] = useState(true);
-  const [userEmail, setUserEmail] = useState<string>('');
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [loading, setLoading] = useState(false);
   const [showChangePasswordModal, setShowChangePasswordModal] = useState(false);
   const [showSubscriptionModal, setShowSubscriptionModal] = useState(false);
-  const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [darkModeEnabled, setDarkModeEnabled] = useState(true);
+  const [notificationsEnabled, setNotificationsEnabled] = useState(false);
+  const [darkModeEnabled, setDarkModeEnabled] = useState(false);
 
   // State for modal 
   const [modalVisible, setModalVisible] = useState(false);
@@ -72,77 +82,64 @@ export default function ProfileScreen() {
   const [termsVisible, setTermsVisible] = useState(false);
   const [privacyVisible, setPrivacyVisible] = useState(false);
 
-  // Helper function to request and get the push token
-  const registerForPushNotificationsAsync = async () => {
-    const { status: existingStatus } = await Notifications.getPermissionsAsync();
-    let finalStatus = existingStatus;
-    if (existingStatus !== 'granted') {
-      const { status } = await Notifications.requestPermissionsAsync();
-      finalStatus = status;
-    }
-    if (finalStatus !== 'granted') {
-      Alert.alert('Push Notifications', 'Permission not granted!');
-      return null;
-    }
-    const token = (await Notifications.getExpoPushTokenAsync()).data;
-    console.log('Expo Push Token:', token);
-    return token;
-  };
-  
-  // In your component (e.g., in ProfileScreen), add a useEffect:
-  useEffect(() => {
-    if (user) {
-      const updatePushToken = async () => {
-        // Request push token from Expo
-        const token = await registerForPushNotificationsAsync();
-        if (token) {
-          // Update the user's profile with the push token
-          const { error } = await supabase
-            .from('profiles')
-            .update({ push_token: token })
-            .eq('user_id', user.id);
-          if (error) {
-            console.error('Error updating push token:', error);
-          } else {
-            console.log('Push token saved successfully!');
-          }
-        }
-      };
-      updatePushToken();
-    }
-  }, [user]);
-  
-  // function to feth the user data from supabase
-  const fetchUserData = async () => {
-    try {
-      setLoading(true);
-      // Fetch user email and profile data (adjust as needed)
-      const { data: userData } = await supabase.auth.getUser();
-      if (userData?.user?.email) {
-        setUserEmail(userData.user.email);
-      }
-      if (userData?.user?.id) {
-        const { data: profileData, error } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userData.user.id)
-          .single();
-        if (error && error.code !== 'PGRST116') {
-          throw error;
-        }
-        if (profileData) {
-          setUserProfile(profileData);
-        }
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  };
-  
+  // Use refs to track previous values and prevent unnecessary updates
+  const prevProfileRef = useRef(profile);
+  const isUpdatingRef = useRef(false);
 
+  // Simple function to fetch profile data
+  const fetchProfile = async () => {
+    if (!user) return;
+    
+    try {
+      setIsLoading(true);
+      setError(null);
+      
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+        
+      if (error) {
+        console.error('Error fetching profile:', error);
+        setError('Failed to load profile data');
+        return;
+      }
+      
+      if (data) {
+        // Transform the data to match our Profile interface
+        const profileData: Profile = {
+          id: data.id,
+          firstName: data.first_name || 'User',
+          lastName: data.last_name || '',
+          email: user.email || '',
+          profileImage: data.profile_image,
+          location: data.location,
+          subscription: data.subscription_plan || 'Free Plan',
+          heightFeet: data.height_feet,
+          heightInches: data.height_inches,
+          notificationsEnabled: data.notifications_enabled || false,
+          darkModeEnabled: data.dark_mode_enabled || false,
+          pushToken: data.push_token
+        };
+        
+        setProfile(profileData);
+        setNotificationsEnabled(profileData.notificationsEnabled);
+        setDarkModeEnabled(profileData.darkModeEnabled);
+      }
+    } catch (err) {
+      console.error('Error in fetchProfile:', err);
+      setError('An unexpected error occurred');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Simple function to refresh profile
+  const refreshProfile = async () => {
+    await fetchProfile();
+  };
+  
   // Set status bar to transparent
   useEffect(() => {
     StatusBar.setBarStyle('light-content');
@@ -151,35 +148,14 @@ export default function ProfileScreen() {
     };
   }, []);
   
-  // Fetch user data
-  useEffect(() => {    
-    fetchUserData();
-  }, []);
-  
-  // Extract name from user metadata or use default
-  const getUserName = () => {
-    const fullName = user?.user_metadata?.full_name || '';
-    if (fullName) {
-      const nameParts = fullName.split(' ');
-      return {
-        firstName: nameParts[0] || 'User',
-        lastName: nameParts.length > 1 ? nameParts.slice(1).join(' ') : ''
-      };
+  // Load profile data when component mounts or user changes
+  useEffect(() => {
+    if (user) {
+      fetchProfile();
+    } else {
+      setProfile(null);
     }
-    return { firstName: 'User', lastName: '' };
-  };
-  
-  const { firstName, lastName } = getUserName();
-  
-  // Prepare user data with profile image handling
-  const getUserProfileImage = () => {
-    if (userProfile?.profile_image) {
-      const imageUrl = `${userProfile.profile_image}?t=${Date.now()}`;
-      return { uri: imageUrl };
-    }
-    return DEFAULT_PROFILE_IMAGE;
-  };
-  
+  }, [user]);
   
   // Format height from feet and inches
   const formatHeightFromDB = (feetVal: number | null, inchesVal: number | null) => {
@@ -187,61 +163,41 @@ export default function ProfileScreen() {
     return `${feetVal}'${inchesVal}"`;
   };
   
-  // Mock user data - in a real app, this would come from your user state or API
-  const [userData, setUserData] = useState({
-    firstName: firstName,
-    lastName: lastName,
-    profileImage: getUserProfileImage(),
-    height: formatHeightFromDB(userProfile?.height_feet ?? 0, userProfile?.height_inches ?? 0),
-    location: userProfile?.location ?? '-',
-    subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
-    email: userEmail
-  });
-  
-  // Update user data when profile is loaded
-  useEffect(() => {
-    if (userProfile || userEmail) {
-      console.log('Profile data loaded:', userProfile);
-      console.log('Height feet from DB:', userProfile?.height_feet);
-      console.log('Height inches from DB:', userProfile?.height_inches);
-      
-      setUserData({
-        firstName: userProfile?.first_name || firstName,
-        lastName: userProfile?.last_name || lastName,
-        profileImage: getUserProfileImage(),
-        height: formatHeightFromDB(userProfile?.height_feet ?? 0, userProfile?.height_inches ?? 0),
-        location: userProfile?.location ?? '-',
-        subscription: (userProfile?.subscription_plan ?? 'Free') + ' Plan',
-        email: userEmail
-      });
-      
-      // Update feet and inches state from database values
-      if (userProfile?.height_feet !== null && userProfile?.height_feet !== undefined) {
-        setFeet(userProfile.height_feet.toString());
-        console.log('Setting feet to:', userProfile.height_feet.toString());
-      }
-      
-      if (userProfile?.height_inches !== null && userProfile?.height_inches !== undefined) {
-        setInches(userProfile.height_inches.toString());
-        console.log('Setting inches to:', userProfile.height_inches.toString());
-      }
-    }
-  }, [userProfile, userEmail]);
+  // User data from profile
+  const userData = {
+    firstName: profile?.firstName || 'User',
+    lastName: profile?.lastName || '',
+    profileImage: profile?.profileImage
+      ? { uri: `${profile.profileImage}?t=${Date.now()}` }
+      : DEFAULT_PROFILE_IMAGE,
+    height: formatHeightFromDB(profile?.heightFeet || null, profile?.heightInches || null),
+    location: profile?.location || '-',
+    subscription: profile?.subscription || 'Free Plan',
+    email: profile?.email || user?.email || '-'
+  };
   
   // Parse height into feet and inches
-  const [feet, setFeet] = useState('5');
-  const [inches, setInches] = useState('7');
+  const [feet, setFeet] = useState(profile?.heightFeet?.toString() || '5');
+  const [inches, setInches] = useState(profile?.heightInches?.toString() || '7');
   
+  // Update feet and inches when profile changes - only when profile actually changes
   useEffect(() => {
-    // Parse height when user data changes
-    if (userData.height && userData.height !== '-') {
-      const heightMatch = userData.height.match(/(\d+)'(\d+)"/);
-      if (heightMatch) {
-        setFeet(heightMatch[1]);
-        setInches(heightMatch[2]);
+    if (profile !== prevProfileRef.current) {
+      prevProfileRef.current = profile;
+      
+      if (profile?.heightFeet !== null && profile?.heightFeet !== undefined) {
+        setFeet(profile.heightFeet.toString());
       }
+      
+      if (profile?.heightInches !== null && profile?.heightInches !== undefined) {
+        setInches(profile.heightInches.toString());
+      }
+      
+      // Update notification and dark mode settings
+      setNotificationsEnabled(profile?.notificationsEnabled || false);
+      setDarkModeEnabled(profile?.darkModeEnabled || false);
     }
-  }, [userData.height]);
+  }, [profile]);
   
   // State for form data
   const [formData, setFormData] = useState<FormData>({
@@ -249,26 +205,41 @@ export default function ProfileScreen() {
     lastName: userData.lastName,
     location: userData.location,
     profileImage: userData.profileImage && userData.profileImage.uri ? userData.profileImage.uri : '',
-    notifications: false,
-    darkMode: true,
+    notifications: notificationsEnabled,
+    darkMode: darkModeEnabled,
     currentPlan: userData.subscription
   });
   
-  // Update form data when user data changes
+  // Update form data when user data changes - only when necessary
   useEffect(() => {
-    setFormData({
-      firstName: userData.firstName,
-      lastName: userData.lastName,
-      location: userData.location,
-      profileImage: userData.profileImage && userData.profileImage.uri
-        ? userData.profileImage.uri
-        : '',
-      notifications: notificationsEnabled,
-      darkMode: darkModeEnabled,
-      currentPlan: userData.subscription
-    });
-  }, [userData]);
-
+    if (profile !== prevProfileRef.current) {
+      setFormData({
+        firstName: userData.firstName,
+        lastName: userData.lastName,
+        location: userData.location,
+        profileImage: userData.profileImage && userData.profileImage.uri
+          ? userData.profileImage.uri
+          : '',
+        notifications: notificationsEnabled,
+        darkMode: darkModeEnabled,
+        currentPlan: userData.subscription
+      });
+    }
+  }, [userData, notificationsEnabled, darkModeEnabled]);
+  
+  // Handle refresh
+  const onRefresh = async () => {
+    if (isUpdatingRef.current) return;
+    
+    setRefreshing(true);
+    isUpdatingRef.current = true;
+    try {
+      await refreshProfile();
+    } finally {
+      setRefreshing(false);
+      isUpdatingRef.current = false;
+    }
+  };
   
   // Handle form input changes
   const handleChange = async (field: keyof FormData, value: any) => {
@@ -278,64 +249,27 @@ export default function ProfileScreen() {
       [field]: value
     });
     
-    if (field === 'notifications' && user) {
-      if (value === true) {
-        // Ask the user to confirm enabling notifications
-        Alert.alert(
-          "Allow Notifications",
-          "Do you want to allow notifications?",
-          [
-            {
-              text: "No",
-              style: "cancel",
-              onPress: async () => {
-                // User declined – ensure toggle remains off
-                setNotificationsEnabled(false);
-                // Update database to keep notifications disabled
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ notifications_enabled: false })
-                  .eq('user_id', user.id);
-                if (error) {
-                  console.error("Error updating notifications:", error);
-                }
-              }
-            },
-            {
-              text: "Yes",
-              onPress: async () => {
-                // User accepted – register for push notifications
-                const token = await registerForPushNotificationsAsync();
-                // Update DB: set notifications_enabled true and store push token
-                const { error } = await supabase
-                  .from('profiles')
-                  .update({ notifications_enabled: true, push_token: token })
-                  .eq('user_id', user.id);
-                if (error) {
-                  console.error("Error updating notifications:", error);
-                } else {
-                  setNotificationsEnabled(true);
-                }
-              }
-            }
-          ],
-          { cancelable: false }
-        );
-      } else {
-        // If toggled off, simply update the DB accordingly.
-        setNotificationsEnabled(false);
+    if (field === 'notifications' && user && !isUpdatingRef.current) {
+      isUpdatingRef.current = true;
+      try {
+        // Simplified notification toggle - just update the database
         const { error } = await supabase
           .from('profiles')
-          .update({ notifications_enabled: false })
+          .update({ notifications_enabled: value })
           .eq('user_id', user.id);
+          
         if (error) {
           console.error("Error updating notifications:", error);
+        } else {
+          setNotificationsEnabled(value);
+          // Refresh profile to get updated settings
+          await refreshProfile();
         }
+      } finally {
+        isUpdatingRef.current = false;
       }
     }
   };
-  
-  
   
   // Format height for display
   const getFormattedHeight = () => {
@@ -350,8 +284,11 @@ export default function ProfileScreen() {
     location: string;
     profileImage: any; // Changed from string to any to handle object with uri
   }) => {
+    if (isUpdatingRef.current) return;
+    
     try {
       setLoading(true);
+      isUpdatingRef.current = true;
       
       console.log('Received updated data:', updatedData);
       
@@ -375,27 +312,6 @@ export default function ProfileScreen() {
         profileImageValue = DEFAULT_PROFILE_IMAGE;
         console.log('No profile image provided, using default');
       }
-
-      // Update local state with an object containing uri
-      setUserData({
-        ...userData,
-        firstName: updatedData.firstName,
-        lastName: updatedData.lastName,
-        height: formattedHeight,
-        location: updatedData.location,
-        profileImage: typeof profileImageValue === 'string'
-          ? { uri: profileImageValue }
-          : profileImageValue
-      });
-
-      // Update form data so profileImage is stored as a URL string
-      setFormData({
-        ...formData,
-        firstName: updatedData.firstName,
-        lastName: updatedData.lastName,
-        location: updatedData.location,
-        profileImage: typeof profileImageValue === 'string' ? profileImageValue : ''
-      });
       
       // Update profile in database if user is logged in
       if (user) {
@@ -461,20 +377,8 @@ export default function ProfileScreen() {
           throw error;
         }
         
-        // Refresh user profile data after update
-        const { data: refreshedProfile, error: refreshError } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', user.id);
-          
-        if (refreshError) {
-          console.error('Error refreshing profile:', refreshError);
-        } else if (refreshedProfile && refreshedProfile.length > 0) {
-          setUserProfile(refreshedProfile[0]);
-          console.log('Updated profile:', refreshedProfile[0]);
-        } else {
-          console.log('No profile found after update/insert');
-        }
+        // Refresh profile data after update
+        await refreshProfile();
       }
       
       setModalVisible(false);
@@ -483,6 +387,7 @@ export default function ProfileScreen() {
       Alert.alert('Error', 'Failed to update profile');
     } finally {
       setLoading(false);
+      isUpdatingRef.current = false;
     }
   };
   
@@ -506,11 +411,6 @@ export default function ProfileScreen() {
     setTimeout(() => {
       console.log('Help & Support modal visible:', helpSupportVisible);
     }, 500);
-  };
-
-  const onRefresh = () => {
-    setRefreshing(true);
-    fetchUserData(); // Ensure fetchUserData sets refreshing to false when done
   };
 
   if (loading) {
@@ -550,7 +450,7 @@ export default function ProfileScreen() {
             <SettingItem 
               icon="envelope" 
               label="Email" 
-              value={userEmail || '-'}
+              value={userData.email || '-'}
               showArrow={false}
             />
             
@@ -623,7 +523,7 @@ export default function ProfileScreen() {
           console.log('Inches changed to:', value);
           setInches(value);
         }}
-        formattedHeight={getFormattedHeight()}
+        formattedHeight={userData.height}
       />
       
       {/* Subscription Modal */}
