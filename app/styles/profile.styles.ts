@@ -342,7 +342,7 @@ export const heightPickerStyles = StyleSheet.create({
 export const subscriptionStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0)',
     justifyContent: 'flex-end',
   },
   modalContent: {
@@ -367,6 +367,12 @@ export const subscriptionStyles = StyleSheet.create({
   },
   closeButton: {
     padding: 5,
+  },
+  renewalDateText: {
+    fontSize: 14,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
   },
   currentPlanContainer: {
     flexDirection: 'row',

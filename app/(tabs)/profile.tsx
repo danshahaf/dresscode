@@ -28,6 +28,8 @@ import { useRouter } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from '@/lib/auth';
 import * as Notifications from 'expo-notifications';
+import { useUserProfile } from '../components/profile/UserProfileContext';
+
 
 // Define types for form data
 interface FormData {
@@ -45,6 +47,11 @@ const DEFAULT_PROFILE_IMAGE = require('@/assets/images/dummy-profile-image.png')
 
 
 export default function ProfileScreen() {
+  const { profile } = useUserProfile();
+  const profileImageSource = profile?.profileImage
+    ? { uri: `${profile.profileImage}?t=${Date.now()}` }
+    : DEFAULT_PROFILE_IMAGE;
+
 
   const { user, signOut } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
@@ -508,7 +515,7 @@ export default function ProfileScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.loadingContainer}>
+      <SafeAreaView style={profileScreenStyles.loadingContainer}>
         <ActivityIndicator size="large" color="#cca702" />
       </SafeAreaView>
     );
@@ -658,12 +665,3 @@ export default function ProfileScreen() {
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f8f8f8',
-  },
-});

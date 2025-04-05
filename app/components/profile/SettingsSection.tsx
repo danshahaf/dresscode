@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, Switch } from 'react-native';
-import { IconSymbol } from '@/components/ui/IconSymbol';
+import { IconSymbol, IconSymbolName } from '@/components/ui/IconSymbol';
 import { profileStyles } from '@/app/styles/profile.styles';
 
 interface SettingsSectionProps {
@@ -11,14 +11,16 @@ interface SettingsSectionProps {
 export const SettingsSection = ({ title, children }: SettingsSectionProps) => {
   return (
     <View style={profileStyles.settingsSection}>
-      <Text style={profileStyles.settingsSectionTitle}>{title}</Text>
+      {title !== 'Account' && (
+        <Text style={profileStyles.settingsSectionTitle}>{title}</Text>
+      )}
       {children}
     </View>
   );
 };
 
 interface SettingItemProps {
-  icon: string;
+  icon: IconSymbolName;
   label: string;
   value?: string;
   subtitle?: React.ReactNode;
@@ -27,23 +29,27 @@ interface SettingItemProps {
   children?: React.ReactNode;
 }
 
-export const SettingItem = ({ 
-  icon, 
-  label, 
-  value, 
+export const SettingItem = ({
+  icon,
+  label,
+  value,
   subtitle,
-  showArrow = true, 
-  onPress, 
-  children 
+  showArrow = true,
+  onPress,
+  children,
 }: SettingItemProps) => {
   return (
-    <TouchableOpacity 
+    <TouchableOpacity
       style={profileStyles.settingItem}
       onPress={onPress}
       disabled={!onPress}
     >
       <View style={profileStyles.settingInfo}>
-        <IconSymbol size={20} name={icon} color={icon === "star.fill" ? "#cca702" : "#333"} />
+        <IconSymbol
+          size={20}
+          name={icon}
+          color={icon === 'star.fill' ? '#cca702' : '#333'}
+        />
         <View style={profileStyles.settingTextContainer}>
           <Text style={profileStyles.settingLabel}>{label}</Text>
           {subtitle && subtitle}
@@ -51,13 +57,15 @@ export const SettingItem = ({
         </View>
       </View>
       {children}
-      {showArrow && onPress && <IconSymbol size={16} name="chevron.right" color="#999" />}
+      {showArrow && onPress && (
+        <IconSymbol size={16} name="chevron.right" color="#999" />
+      )}
     </TouchableOpacity>
   );
 };
 
 interface ToggleSettingProps {
-  icon: string;
+  icon: IconSymbolName;
   label: string;
   value: boolean;
   onValueChange: (value: boolean) => void;
@@ -80,4 +88,4 @@ export const ToggleSetting = ({ icon, label, value, onValueChange }: ToggleSetti
       />
     </View>
   );
-}; 
+};

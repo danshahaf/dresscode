@@ -9,7 +9,9 @@
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
-      "merchantId": ["merchant.com.dresscode"],
+      "merchantId": [
+        "merchant.com.dresscode"
+      ],
       "supportsTablet": true,
       "bundleIdentifier": "com.seagulltechnologies.dresscode",
       "infoPlist": {
@@ -51,6 +53,14 @@
     ],
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "supabaseUrl": "YOUR_SUPABASE_URL",
+      "supabaseAnonKey": "YOUR_SUPABASE_ANON_KEY",
+      "stripePublishableKey": "YOUR_STRIPE_PUBLISHABLE_KEY",
+      "eas": {
+        "projectId": "555c44d3-648a-41cd-b752-fe2407cee206"
+      }
     }
   }
 }

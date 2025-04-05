@@ -1,8 +1,8 @@
 import { StyleSheet, Dimensions } from 'react-native';
 
 const screenWidth = Dimensions.get('window').width;
-const chartWidth = screenWidth - 60; // Chart width with padding
-const ticketWidth = (screenWidth - 50) / 3; // 3 tickets per row with spacing
+const chartWidth = screenWidth - 60;
+const ticketWidth = (screenWidth - 50) / 3;
 
 export const progressStyles = StyleSheet.create({
   container: {
@@ -10,7 +10,6 @@ export const progressStyles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   header: {
-    // flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
@@ -127,19 +126,24 @@ export const progressStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
-  
   // Modal styles
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.5)', // dim background
     justifyContent: 'flex-end',
   },
   modalContent: {
     height: '95%',
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent', // animated container is transparent
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     overflow: 'hidden',
+  },
+  modalInner: {
+    flex: 1,
+    backgroundColor: '#fff', // visible content has white background
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   swipeIndicatorContainer: {
     width: '100%',
@@ -235,8 +239,6 @@ export const progressStyles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  
-  // AI Analysis styles
   aiAnalysisContainer: {
     flex: 1,
   },
@@ -405,7 +407,7 @@ export const progressStyles = StyleSheet.create({
     position: 'relative',
   },
   circularSvg: {
-    transform: [{ rotate: '-90deg' }]
+    transform: [{ rotate: '-90deg' }],
   },
   circularScoreTextContainer: {
     position: 'absolute',
@@ -447,8 +449,7 @@ export const progressStyles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 12,
-    color: '#cca702'
-    // marginTop: 12,
+    color: '#cca702',
   },
   suggestionsText: {
     fontSize: 14,
@@ -497,4 +498,4 @@ export const chartDimensions = {
 
 export const outfitDimensions = {
   ticketWidth: ticketWidth,
-}; 
+};

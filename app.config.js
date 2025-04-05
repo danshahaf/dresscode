@@ -1,4 +1,5 @@
-module.exports = {
+// app.config.js
+export default {
   expo: {
     name: 'Dresscode AI',
     slug: 'dresscode',
@@ -9,29 +10,29 @@ module.exports = {
     userInterfaceStyle: 'automatic',
     newArchEnabled: true,
     ios: {
-      merchantId: ["merchant.com.dresscode"],
+      merchantId: ['merchant.com.dresscode'],
       supportsTablet: true,
       bundleIdentifier: 'com.seagulltechnologies.dresscode',
       infoPlist: {
         ITSAppUsesNonExemptEncryption: false,
       },
       entitlements: {
-        "com.apple.developer.in-app-payments": ["merchant.com.dresscode"],
+        'com.apple.developer.in-app-payments': ['merchant.com.dresscode'],
         'aps-environment': 'production',
         'com.apple.developer.applesignin': ['Default'],
-      }
+      },
     },
     android: {
       package: 'com.seagulltechnologies.dresscode',
       adaptiveIcon: {
         foregroundImage: './assets/images/adaptive-icon.png',
-        backgroundColor: '#ffffff'
-      }
+        backgroundColor: '#ffffff',
+      },
     },
     web: {
       bundler: 'metro',
       output: 'static',
-      favicon: './assets/images/favicon.png'
+      favicon: './assets/images/favicon.png',
     },
     plugins: [
       'expo-router',
@@ -41,19 +42,20 @@ module.exports = {
           image: './assets/images/splash-icon.png',
           imageWidth: 200,
           resizeMode: 'contain',
-          backgroundColor: '#ffffff'
-        }
-      ]
+          backgroundColor: '#ffffff',
+        },
+      ],
     ],
     experiments: {
-      typedRoutes: true
+      typedRoutes: true,
     },
     extra: {
       supabaseUrl: process.env.EXPO_PUBLIC_SUPABASE_URL,
       supabaseAnonKey: process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY,
+      stripePublishableKey: process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY,
       eas: {
-        projectId: "555c44d3-648a-41cd-b752-fe2407cee206"
-      }
-    }
-  }
+        projectId: '555c44d3-648a-41cd-b752-fe2407cee206',
+      },
+    },
+  },
 };

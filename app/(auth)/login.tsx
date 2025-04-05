@@ -22,7 +22,7 @@ import { InfoModal } from '@/app/components/profile/InfoModal';
 import { TermsOfServiceContent } from '@/app/components/profile/TermsOfServiceContent';
 import { PrivacyPolicyContent } from '@/app/components/profile/PrivacyPolicyContent';
 import { hasPremiumAccess } from '@/lib/premiumAccess';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const { width, height } = Dimensions.get('window');
 
@@ -34,7 +34,7 @@ const redirectUrl = makeRedirectUri({
 const verifyAge = async () => {
   try {
     // Check if the age has already been verified
-    const isVerified = await AsyncStorage.getItem('ageVerified');
+    const isVerified = "true" //await AsyncStorage.getItem('ageVerified');
     if (isVerified === 'true') {
       // If already verified, immediately resolve
       return true;
@@ -55,7 +55,7 @@ const verifyAge = async () => {
             text: "Yes", 
             onPress: async () => {
               // Save the verification flag so the prompt doesn't show again
-              await AsyncStorage.setItem('ageVerified', 'true');
+              // await AsyncStorage.setItem('ageVerified', 'true'); //TODO: resolve this
               resolve(true);
             } 
           }
